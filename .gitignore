@@ -1,0 +1,4 @@
+# No build files
+build/*
+# no header dependency thingies
+*.d
