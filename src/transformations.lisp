@@ -98,3 +98,17 @@
   (the single-float x)
   (the single-float y)
   (make-array '(3 1) :element-type 'single-float :initial-contents `((,x) (,y) (0.0))))
+
+(defmethod transform((tr transformation) (m array))
+  (mmul (transf-matrix-matrix  (slot-value tr 'combined)) m)
+  )
+
+
+#|
+(with-transform transform &restbody)
+|#
+(defmacro with-transform(tr &body body)
+  (loop for i in body
+        collect `(transform ,tr ,i))
+  )
+

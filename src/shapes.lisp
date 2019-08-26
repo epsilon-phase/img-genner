@@ -1,6 +1,29 @@
 (in-package "img-genner")
-(defstruct shape
-  (bounds )
-  (stroke )
-  (fill)
+
+(defclass shape() ())
+(defclass circle(shape) ())
+(defclass rectangle(shape) ())
+(defclass regular-polygon(shape)
+  ((degree :initform 3)));Default is a triangle :3
+
+(defgeneric get-segments(shape &key max-degree))
+(defmethod get-segments((shape circle) &key (max-degree 50))
+  (loop for i from 0 upto max-degree
+        collect(let* ((angle (* (/ (* 2 3.1415) max-degree) i))
+                      (x (cos angle))
+                      (y (sin angle)))
+                 (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0)))
+                 )))
+(defmethod get-segments((shape rectangle) &key (max-degree))
+  (map 'list (lambda (x y) (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0))))
+       '(-0.5 0.5 0.5 -0.5) '(0.5 0.5 -0.5 -0.5)
+       )
   )
+(defmethod get-segments((shape regular-polygon) &key)
+  (loop for i from 0 to (slot-value shape 'degree)
+        collect(let* ((angle (* i (/ (* 2 pi) (slot-value shape 'degree))))
+                      (x (cos angle))
+                      (y (sin angle)))
+                 (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0)))
+                 )
+        ))
