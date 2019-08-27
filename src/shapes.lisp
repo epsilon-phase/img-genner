@@ -1,29 +1,21 @@
 (in-package "img-genner")
 
 (defclass shape() ())
-(defclass circle(shape) ())
-(defclass rectangle(shape) ())
-(defclass regular-polygon(shape)
-  ((degree :initform 3)));Default is a triangle :3
-
-(defgeneric get-segments(shape &key max-degree))
-(defmethod get-segments((shape circle) &key (max-degree 50))
-  (loop for i from 0 upto max-degree
-        collect(let* ((angle (* (/ (* 2 3.1415) max-degree) i))
-                      (x (cos angle))
-                      (y (sin angle)))
-                 (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0)))
-                 )))
-(defmethod get-segments((shape rectangle) &key (max-degree))
-  (map 'list (lambda (x y) (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0))))
-       '(-0.5 0.5 0.5 -0.5) '(0.5 0.5 -0.5 -0.5)
-       )
+(defgeneric bounds(s))
+(defclass circle(shape)
+  ((center :initform #2A((0.0)(0.0)(0.0)))
+   (radius :initform #(1.0 1.0)))
   )
-(defmethod get-segments((shape regular-polygon) &key)
-  (loop for i from 0 to (slot-value shape 'degree)
-        collect(let* ((angle (* i (/ (* 2 pi) (slot-value shape 'degree))))
-                      (x (cos angle))
-                      (y (sin angle)))
-                 (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0)))
-                 )
-        ))
+(defgeneric get-segments(shape &key max-degree))
+(defmethod get-segments((shape circle) &key (max-degree 10))
+  (with-slots (center radius) shape
+    (loop for i from 0 to max-degree
+          for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
+          with x = 0.0
+          with y = 0.0
+          do(progn
+              (setf y (+ (aref center 0 1) (* (sin angle) (aref radius 1))))
+              x (+ (aref center 0 0) (* (cos angle) (aref radius 0))))
+          collect (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0))))
+  ))
+(print (macroexpand '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
