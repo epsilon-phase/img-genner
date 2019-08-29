@@ -5,7 +5,7 @@
   (let* ((m (car (array-dimensions A)))
          (n (cadr (array-dimensions A)))
          (l (cadr (array-dimensions B)))
-         (C (make-array `(,m ,l) :initial-element 0.0 :element-type 'single-float)))
+         (C (make-array `(,m ,l) :initial-element 0.0 )))
     (loop for i from 0 to (- m 1) do
       (loop for k from 0 to (- l 1) do
         (setf (aref C i k)
@@ -20,14 +20,14 @@
 
 (defstruct transf-matrix
   (kind 'iden :type symbol)
-  (matrix (make-array '(3 3) :element-type 'single-float
+  (matrix (make-array '(3 3) 
                                        :initial-contents '((1.0 0.0 0.0) (0.0 1.0 0.0) (0.0 0.0 1.0)))
-   :type (simple-array single-float (3 3))))
+   :type (simple-array t (3 3))))
 (defun make-rotation(angle)
   "Create a rotation matrix"
   (make-transf-matrix :kind 'rot :matrix
                       (make-array '(3 3)
-                                  :element-type 'single-float
+
                                   :initial-contents `((,(cos angle) ,(sin angle) 0.0)
                                                       (,(* -1.0 (sin angle)) ,(cos angle) 0.0)
                                                       (0.0 0.0 1.0)))))
@@ -42,7 +42,7 @@
 (defun make-scale(sx sy)
   (make-transf-matrix :kind 'scale
                       :matrix (make-array '(3 3)
-                                          :element-type 'single-float
+                                          
                                           :initial-contents `((,sx 0.0 0.0)(0.0 ,sy 0.0) (0.0 0.0 1.0))
                                                        )))
 (defun explain-matrix(tra)
