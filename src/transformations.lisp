@@ -112,3 +112,8 @@
         collect `(transform ,tr ,i))
   )
 
+(defun compare-points(a b)
+  (if (= (aref a 0 0) (aref b 0 0))
+      (< (aref a 1 0) (aref b 1 0))
+      (< (aref a 0 0) (aref b 0 0))
+      ))

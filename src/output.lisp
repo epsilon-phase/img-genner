@@ -7,8 +7,8 @@
  | It is *that* lewd.
  |#
 (defun static-color-stroker(color)
-  (lambda (i x y t)
-    (declare (ignore t))
+  (lambda (i x y frac)
+    (declare (ignore frac))
     (loop for i across color
           for z = 0 then (+ z 1)
           do(setf (aref i x y z) (aref color z))
@@ -71,6 +71,25 @@
          )
         )
     )
+  )
+(defun stroke-h-line(image stroker start end)
+  (let ((sx (truncate (aref start 0 0)))
+        (ex (truncate (aref end 0 0)))
+        (y (truncate (aref start 1 0))))
+    (loop for i from sx to ex
+          for frac = 0.0 then (/ (- i sx)
+                                 (- ex
+                                    sx))
+          do (funcall stroker image i (aref start 1) frac)
+          ))
+  )
+(defun line-pairs(l)
+  "";TODO
+  (if l
+      (cons (cons (First l) (second l))
+            (line-pairs (rest (rest l))))
+      )
+  nil
   )
 (defun fill(segments image stroker)
   (let* ((dim (calculate-bounding-box segments))
