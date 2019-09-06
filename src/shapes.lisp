@@ -2,13 +2,13 @@
 
 (defclass shape() ())
 (defgeneric bounds(s))
-(defclass circle(ellipse)
-  ((center :initform #2A((0.0)(0.0)(0.0)))
-   (radius :initform #(1.0 1.0)))
+(defclass ellipse(shape)
+  ((center :initform #2A((0.0)(0.0)(0.0)) :initarg :center)
+   (radius :initform #(1.0 1.0) :initarg :radius))
   )
 (defclass rectangle(shape)
   ((topleft :initform #2A((0.0)(0.0)(0.0)))
-   (width :initform 1.0)
+   (width :initform 1.0 )
    (height :initform 1.0)))
 (defgeneric get-segments(shape &key max-degree))
 (defmethod get-segments((shape ellipse) &key (max-degree 10))
@@ -18,8 +18,8 @@
           with x = 0.0
           with y = 0.0
           do(progn
-              (setf y (+ (aref center 0 1) (* (sin angle) (aref radius 1))))
-              x (+ (aref center 0 0) (* (cos angle) (aref radius 0))))
+              (setf y (+ (aref center 1 0) (* (sin angle) (aref radius 1)))
+              x (+ (aref center 0 0) (* (cos angle) (aref radius 0)))))
           collect (make-array '(3 1) :initial-contents `((,x)(,y)(0.0))))
     ))
 (defmethod get-segments((shape rectangle) &key (max-degree 4))
@@ -64,7 +64,7 @@
 (defun get-lines(segments)
   "Return a list of cons pairs of points representing lines
 in a closed path"
-  (push `(,(first segments) . ,(last segments))
+  (cons `(,(first segments) . ,(car (last segments)))
         (loop for i in segments
               for j in (rest segments)
               collect `(,i . ,j)

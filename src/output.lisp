@@ -1,19 +1,53 @@
 (require 'png)
 (in-package "img-genner")
-(use-package 'png)
-#|
- | Stroker is what we're calling it and yes.
- |
- | It is *that* lewd.
- |#
+
+
 (defun static-color-stroker(color)
   (lambda (i x y frac)
     (declare (ignore frac))
-    (loop for i across color
+    (loop for c across color
           for z = 0 then (+ z 1)
-          do(setf (aref i x y z) (aref color z))
+          do(setf (aref i y x z) c)
           )
     ))
+(defun gradient-color-stroker(c1 c2)
+  "This returns a function that can be used to color a line/line-like object with a gradient
+based on how far the coordinate is along the line"
+  (lambda (i x y frac)
+    (loop for a across c1
+          for b across c2
+          for z = 0 then (1+ z)
+          do(setf (aref i y x z)
+                  (coerce (truncate
+                           (+ (* a (- 1 frac))
+                              (* b frac)))
+                          '(unsigned-byte 8)))
+          )
+    )
+  )
+(defun radial-gradient-stroker(c1 c2 center-x center-y maxradius)
+  "Creates a radial gradient stroker centered on a given coordinate, with a scale up to max radius"
+  (lambda (i x y frac)
+    (declare (ignore frac))
+    (loop for a across c1
+          for b across c2
+          for z = 0 then (1+ z)
+          with d = (min 1.0
+                        (max 0
+                             (/ (sqrt (+
+                                       (expt (- x center-x) 2)
+                                       (expt (- y center-y) 2)
+                                       ))
+                                maxradius)
+                             ))
+          do(setf (aref i y x z)
+                  (coerce (truncate
+                           (+ (* a (- 1 d)) (* b d)))
+                          '(unsigned-byte 8))
+                  )
+          )
+    )
+  )
 (defun calculate-bounding-box(segments)
   (let ((top-left (make-array 2 :initial-contents `(,most-positive-single-float ,most-negative-single-float )))
         (bottom-right (make-array 2 :initial-contents `(,most-negative-single-float ,most-positive-single-float))))
@@ -32,77 +66,71 @@
     (list top-left bottom-right)
     )
   )
-;TODO move this to shapes.lisp :)
-#|
- |Translated from https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
- |#
-(defun orientation(a b c)
-  (let ((val (- (* (- (aref b 1) (aref a 1)) (- (aref c 0) (aref b 0)))
-                (* (- (aref b 0) (aref a 0)) (- (aref c 1) (aref b 1))))))
-  (if (or (zerop val) (< single-float-negative-epsilon val single-float-epsilon))
-      0;colinear
-      (if (> val 0)
-          1;clockwise
-          2);counter-clockwise
-      )
-    )
-  )
-(defun on-segment(a b c)
-  "Determines if b lies on the line segment ac"
-  (flet ((p-x (v) (aref v 0))
-         (p-y (v) (aref v 1)))
-    (and (< (p-x b) (max (p-x a) (p-x c)))
-         (> (p-x b) (min (p-x a) (p-x c)))
-         (< (p-y b) (max (p-y a) (p-y c)))
-         (> (p-y b) (min (p-y a) (p-y c))))
-    ))
-(defun intsersects-p(a b c d);TODO Make this return the location of the intersection
-  (let ((o1 (orientation a b c))
-        (o2 (orientatino a b d))
-        (o3 (orientation c d a))
-        (o3 (orientation c d b)))
-    (if (and (not (= o1 o2)) (not (= o3 o4)))
-        t
-        (or
-         (and (zerop o1) (on-segment a c b))
-         (and (zerop o2) (on-segment a d b))
-         (and (zerop o3) (on-segment c a d))
-         (and (zerop o4) (on-segment c b d))
-         )
-        )
-    )
-  )
+
 (defun stroke-h-line(image stroker start end)
   (let ((sx (truncate (aref start 0 0)))
         (ex (truncate (aref end 0 0)))
         (y (truncate (aref start 1 0))))
+;    (format t "stroking color from ~a to ~a \n" sx ex)
     (loop for i from sx to ex
           for frac = 0.0 then (/ (- i sx)
                                  (- ex
                                     sx))
-          do (funcall stroker image i (aref start 1) frac)
+          do (funcall stroker image i y frac)
           ))
   )
 (defun line-pairs(l)
   "";TODO
-  (if l
-      (cons (cons (First l) (second l))
-            (line-pairs (rest (rest l))))
-      )
-  nil
+  (loop for i from 0 upto (1- (length l))
+        with a = nil
+        with b = nil 
+        when (evenp i)
+          do(setf a (elt l i))
+        when (oddp i)
+          collect `(,a . ,(elt l i))
+   )
   )
-(defun fill(segments image stroker)
+(defun fill-shape(segments image stroker)
   (let* ((dim (calculate-bounding-box segments))
          (startx (truncate (aref (first dim) 0)))
          (endx (truncate (aref (second dim) 0)))
          (starty (truncate (aref (second dim) 1)))
          (endy (truncate (aref (first dim) 1)))
-         (inside nil)
+         (lines (get-lines segments))
          )
+    (format t "Looking for intersections between y coords ~A ~A" starty endy)
     (loop for y from starty upto endy
-          do(loop for x from startx upto endx
-                  do();TODO finish this function
-                  )
+          do(map 'list
+                 (lambda (x)
+                   (print x)
+                   (stroke-h-line image stroker (car x) (cdr x))
+                   )
+                 (line-pairs
+                  (sort (remove-if-not #'identity
+                                       (map 'list
+                                            (lambda (x)
+                                              (get-intersection startx y endx y
+                                                                (aref (car x) 0 0)
+                                                                (aref (car x) 1 0)
+                                                                (aref (cdr x) 0 0)
+                                                                (aref (cdr x) 1 0)
+                                                                )
+                                              )
+                                            lines))
+                        #'compare-points)))
           )
-    )
+    ))
+;TODO figure out how to just do this on call, rather than all the time
+(let ((a (make-instance 'ellipse))
+      (b (png:make-image 101 101 3)))
+  (setf (slot-value a 'radius) #(50 50)
+        (slot-value a 'center) #2a((50)(50)(0)))
+  (format t "Line pairs: ~a" (line-pairs (get-segments a :max-degree 10)))(terpri)
+  (fill-shape (get-segments a) b (static-color-stroker #(255 0 0)))
+  (with-open-file (f "hello.png" :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede :if-does-not-exist :create)
+    (png:encode b f))
+  (fill-shape (get-segments a) b (radial-gradient-stroker #(255 0 0 0) #(0 255 0) 50 50 50))
+  (with-open-file (f "hello1.png" :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede :if-does-not-exist :create)
+    (png:encode b f))
   )
+

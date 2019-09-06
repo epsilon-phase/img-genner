@@ -7,4 +7,5 @@
                (:file "src/utilities")
                (:file "src/transformations")
                (:file "src/shapes")
+               (:file "src/output")
                ))
