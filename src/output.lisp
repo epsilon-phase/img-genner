@@ -157,13 +157,10 @@ based on how far the coordinate is along the line"
     (png:encode b f))
   )
 (let ((a (loop repeat 4
-               for i = 20 then (+ i 35)
+               for i = 20.0 then (+ i 35)
                collect (let ((g (make-instance 'ellipse )))
                          (setf (slot-value g 'radius) (vector 20 20)
-                               (slot-value g 'center) (make-array '(3 1)
-                                                                  :initial-contents  `((,i)
-                                                                                       (20.0)
-                                                                                       (0.0))))
+                               (slot-value g 'center) (point  i 20.0))
                          g
                          )))
       (colors (list (vector 255 0 0) (vector 0 255 0) (vector 0 0 255) (vector 255 0 255)))
@@ -174,8 +171,10 @@ based on how far the coordinate is along the line"
                       b
                       (static-color-stroker c))
         )
-  (with-open-file (f "circles.png" :direction :output :element-type '(unsigned-byte 8)
-                                    :if-exists :supersede :if-does-not-exist :create)
+  (with-open-file (f "circles.png" :direction :output
+                                   :element-type '(unsigned-byte 8)
+                                   :if-exists :supersede
+                                   :if-does-not-exist :create)
     (png:encode b f)
     )
   )
