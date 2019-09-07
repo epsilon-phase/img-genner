@@ -1,14 +1,34 @@
 (require 'png)
 (in-package "img-genner")
 
+(defun set-pixel(image x y color)
+  "Bounds respecting color setting"
+  (if (and
+       (< x (array-dimension image 1))
+       (< y (array-dimension image 0))
+       (= (array-dimension color 0) (array-dimension image 2)))
+      (loop for i across color
+            for z = 0 then (1+ z)
+            do(setf (aref image y x z) i)))
+  )
 
+(defun set-pixel-component(image x y c color)
+  "Bounds respecting color setting, but more convenient for gradients"
+  (if (and
+       (< x (array-dimension image 1))
+       (< y (array-dimension image 0))
+       (< c (array-dimension image 2)))
+      (setf (aref image y x c) color)
+      )
+  )
+(defun interpolate(max a b frac)
+  (let ((f (max 0 (min 1 frac))))
+    (+ (* a (- 1 frac))
+       (* b frac))))
 (defun static-color-stroker(color)
   (lambda (i x y frac)
     (declare (ignore frac))
-    (loop for c across color
-          for z = 0 then (+ z 1)
-          do(setf (aref i y x z) c)
-          )
+    (set-pixel i x y color)
     ))
 (defun gradient-color-stroker(c1 c2)
   "This returns a function that can be used to color a line/line-like object with a gradient
@@ -17,7 +37,7 @@ based on how far the coordinate is along the line"
     (loop for a across c1
           for b across c2
           for z = 0 then (1+ z)
-          do(setf (aref i y x z)
+          do(set-pixel-component i x y z
                   (coerce (truncate
                            (+ (* a (- 1 frac))
                               (* b frac)))
@@ -40,7 +60,7 @@ based on how far the coordinate is along the line"
                                        ))
                                 maxradius)
                              ))
-          do(setf (aref i y x z)
+          do(set-pixel-component i x y z
                   (coerce (truncate
                            (+ (* a (- 1 d)) (* b d)))
                           '(unsigned-byte 8))
@@ -49,22 +69,26 @@ based on how far the coordinate is along the line"
     )
   )
 (defun calculate-bounding-box(segments)
-  (let ((top-left (make-array 2 :initial-contents `(,most-positive-single-float ,most-negative-single-float )))
-        (bottom-right (make-array 2 :initial-contents `(,most-negative-single-float ,most-positive-single-float))))
-    (loop for i in segments
-          for x = (aref i 0 0) then (aref i 0 0)
-          for y = (aref i 1 0) then (aref i 1 0)
-          when (> x (aref bottom-right 0))
-            do(setf (aref bottom-right 0) x)
-          when (< x (aref top-left 0))
-            do(setf (aref top-left 0) x)
-          when (> y (aref top-left 1))
-            do(setf (aref top-left 1) y)
-          when (< y (aref bottom-right 1))
-            do(setf (aref bottom-right 1) y)
+  (loop for i in segments
+        for x = (aref i 0 0) then (aref i 0 0)
+        for y = (aref i 1 0) then (aref i 1 0)
+        maximizing x into max-x
+        minimizing y into min-y
+        maximizing y into max-y
+        minimizing x into min-x
+        finally (return
+                  (list (vector min-x max-y)
+                        (vector max-x min-y))
+                  )
+;          when (> x (aref bottom-right 0))
+;            do(setf (aref bottom-right 0) x)
+;          when (< x (aref top-left 0))
+;            do(setf (aref top-left 0) x)
+;          when (> y (aref top-left 1))
+;            do(setf (aref top-left 1) y)
+;          when (< y (aref bottom-right 1))
+;            do(setf (aref bottom-right 1) y)
           )
-    (list top-left bottom-right)
-    )
   )
 
 (defun stroke-h-line(image stroker start end)
@@ -80,10 +104,10 @@ based on how far the coordinate is along the line"
           ))
   )
 (defun line-pairs(l)
-  "";TODO
+  "Generate pairs of lines that can be stroked in order to fill a polygon."
   (loop for i from 0 upto (1- (length l))
         with a = nil
-        with b = nil 
+        with b = nil
         when (evenp i)
           do(setf a (elt l i))
         when (oddp i)
@@ -98,11 +122,10 @@ based on how far the coordinate is along the line"
          (endy (truncate (aref (first dim) 1)))
          (lines (get-lines segments))
          )
-    (format t "Looking for intersections between y coords ~A ~A" starty endy)
+    ;(format t "Looking for intersections between y coords ~A ~A" starty endy)
     (loop for y from starty upto endy
           do(map 'list
                  (lambda (x)
-                   (print x)
                    (stroke-h-line image stroker (car x) (cdr x))
                    )
                  (line-pairs
@@ -129,8 +152,30 @@ based on how far the coordinate is along the line"
   (fill-shape (get-segments a) b (static-color-stroker #(255 0 0)))
   (with-open-file (f "hello.png" :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede :if-does-not-exist :create)
     (png:encode b f))
-  (fill-shape (get-segments a) b (radial-gradient-stroker #(255 0 0 0) #(0 255 0) 50 50 50))
+  (fill-shape (get-segments a :max-degree 20) b (radial-gradient-stroker #(255 0 0 0) #(0 255 0) 50 50 50))
   (with-open-file (f "hello1.png" :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede :if-does-not-exist :create)
     (png:encode b f))
   )
-
+(let ((a (loop repeat 4
+               for i = 20 then (+ i 35)
+               collect (let ((g (make-instance 'ellipse )))
+                         (setf (slot-value g 'radius) (vector 20 20)
+                               (slot-value g 'center) (make-array '(3 1)
+                                                                  :initial-contents  `((,i)
+                                                                                       (20.0)
+                                                                                       (0.0))))
+                         g
+                         )))
+      (colors (list (vector 255 0 0) (vector 0 255 0) (vector 0 0 255) (vector 255 0 255)))
+      (b (png:make-image 40 400 3)))
+  (loop for i in a
+        for c in colors
+        do(fill-shape (get-segments i :max-degree 20)
+                      b
+                      (static-color-stroker c))
+        )
+  (with-open-file (f "circles.png" :direction :output :element-type '(unsigned-byte 8)
+                                    :if-exists :supersede :if-does-not-exist :create)
+    (png:encode b f)
+    )
+  )

@@ -6,6 +6,16 @@
   ((center :initform #2A((0.0)(0.0)(0.0)) :initarg :center)
    (radius :initform #(1.0 1.0) :initarg :radius))
   )
+(defun make-ellipse(center-x center-y radius-x radius-y)
+  "Convenience function for ellipse-creation."
+  (let ((a (make-instance 'ellipse)))
+    (setf (slot-value a 'center)
+          (point center-x center-y)
+          (slot-value a 'radius)
+          (vector radius-x radius-y))
+    a
+    )
+  )
 (defclass rectangle(shape)
   ((topleft :initform #2A((0.0)(0.0)(0.0)))
    (width :initform 1.0 )
