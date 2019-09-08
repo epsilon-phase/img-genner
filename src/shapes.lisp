@@ -76,8 +76,6 @@
               nil))
     )
   )
-(print (get-intersection 0.0 0.0 0.0 1.0 -0.5 0.5 0.5 0.5))
-(print (get-intersection 0.0 0.0 0.0 1.0 0.0 0.5 0.5 0.5))
 (defun get-lines(segments)
   "Return a list of cons pairs of points representing lines
 in a closed path"
@@ -89,3 +87,5 @@ in a closed path"
         )
   )
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
+
+(export '(ellipse rectangle make-ellipse get-segments))

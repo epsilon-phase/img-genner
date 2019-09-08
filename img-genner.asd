@@ -10,7 +10,3 @@
                (:file "src/shapes")
                (:file "src/output")
                ))
-(defsystem "img-genner-examples"
-  :version "0.0.0"
-  :author "Violet White"
-  :depends-on ("img-genner"))

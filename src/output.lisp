@@ -156,42 +156,4 @@ based on how far the coordinate is along the line"
                         #'compare-points)))
           )
     ))
-                                        ;TODO figure out how to just do this on
-                                        ; all, rather than all the time
-                                        ;TODO move this to a test/example file.
-(let ((a (make-instance 'ellipse))
-      (b (png:make-image 101 101 3)))
-  (setf (slot-value a 'radius) #(50 50)
-        (slot-value a 'center) #2a((50)(50)(0)))
-  (format t "Line pairs: ~a" (line-pairs (get-segments a :max-degree 10)))(terpri)
-  (fill-shape (get-segments a) b (static-color-stroker #(255 0 0)))
-  (with-open-file (f "hello.png" :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede :if-does-not-exist :create)
-    (png:encode b f))
-  (fill-shape (get-segments a :max-degree 20) b (radial-gradient-stroker #(255 0 0 0) #(0 255 0) 50 50 50))
-  (with-open-file (f "hello1.png" :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede :if-does-not-exist :create)
-    (png:encode b f))
-  )
-(let ((a (loop repeat 8
-               for i = 20.0 then (+ i 35)
-               collect (let ((g (make-instance 'ellipse )))
-                         (setf (slot-value g 'radius) (vector 20 20)
-                               (slot-value g 'center) (point  i 20.0))
-                         g
-                         )))
-      (colors (list (vector 255 0 0) (vector 0 255 0) (vector 0 0 255) (vector 255 0 255)
-                    (vector #xb0 #x0b #x1e)))
-      (b (png:make-image 40 400 3)))
-  (setf (cdr (last colors)) colors)
-  (loop for i in a
-        for c in colors
-        do(fill-shape (get-segments i :max-degree 20)
-                      b
-                      (static-color-stroker c))
-        )
-  (with-open-file (f "circles.png" :direction :output
-                                   :element-type '(unsigned-byte 8)
-                                   :if-exists :supersede
-                                   :if-does-not-exist :create)
-    (png:encode b f)
-    )
-  )
+(export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker))
