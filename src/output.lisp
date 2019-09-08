@@ -3,13 +3,14 @@
 
 (defun set-pixel(image x y color)
   "Bounds respecting color setting"
+  (declare (type fixnum x y))
   (if (and
        (< x (array-dimension image 1))
        (< y (array-dimension image 0))
        (= (array-dimension color 0) (array-dimension image 2)))
       (loop for i across color
             for z = 0 then (1+ z)
-            do(setf (aref image y x z) i)))
+            do(setf (aref image (- (1- (array-dimension image 0)) y) x z) i)))
   )
 
 (defun set-pixel-component(image x y c color)
@@ -22,9 +23,21 @@
       )
   )
 (defun interpolate(max a b frac)
+  "'naive' linear interpolation"
   (let ((f (max 0 (min 1 frac))))
     (+ (* a (- 1 frac))
        (* b frac))))
+(defun lerp(p1 p2 f)
+  (typecase p1
+    (vector
+     (map 'vector
+       (lambda (a b)
+         (+
+          (* (- 1 f) a) (* f b)))
+       p1 p2))
+    (t (+ (* (- 1 f) p1) (* f b)))
+    )
+  )
 (defun static-color-stroker(color)
   (lambda (i x y frac)
     (declare (ignore frac))
@@ -143,7 +156,9 @@ based on how far the coordinate is along the line"
                         #'compare-points)))
           )
     ))
-;TODO figure out how to just do this on call, rather than all the time
+                                        ;TODO figure out how to just do this on
+                                        ; all, rather than all the time
+                                        ;TODO move this to a test/example file.
 (let ((a (make-instance 'ellipse))
       (b (png:make-image 101 101 3)))
   (setf (slot-value a 'radius) #(50 50)
@@ -156,15 +171,17 @@ based on how far the coordinate is along the line"
   (with-open-file (f "hello1.png" :direction :output :element-type '(unsigned-byte 8) :if-exists :supersede :if-does-not-exist :create)
     (png:encode b f))
   )
-(let ((a (loop repeat 4
+(let ((a (loop repeat 8
                for i = 20.0 then (+ i 35)
                collect (let ((g (make-instance 'ellipse )))
                          (setf (slot-value g 'radius) (vector 20 20)
                                (slot-value g 'center) (point  i 20.0))
                          g
                          )))
-      (colors (list (vector 255 0 0) (vector 0 255 0) (vector 0 0 255) (vector 255 0 255)))
+      (colors (list (vector 255 0 0) (vector 0 255 0) (vector 0 0 255) (vector 255 0 255)
+                    (vector #xb0 #x0b #x1e)))
       (b (png:make-image 40 400 3)))
+  (setf (cdr (last colors)) colors)
   (loop for i in a
         for c in colors
         do(fill-shape (get-segments i :max-degree 20)
