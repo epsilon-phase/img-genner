@@ -20,6 +20,13 @@
   ((topleft :initform #2A((0.0)(0.0)(0.0)))
    (width :initform 1.0 )
    (height :initform 1.0)))
+(defmethod bounds((c ellipse))
+  (with-slots (center radius) c
+    (list
+     (vector (- (aref center 0 0) (svref radius 0))
+             (+ (aref center 1 0) (svref radius 1)))
+     (vector (+ (aref center 0 0) (svref radius 0))
+             (- (aref center 1 0) (svref radius 1))))))
 (defgeneric get-segments(shape &key max-degree))
 (defmethod get-segments((shape ellipse) &key (max-degree 10))
   (with-slots (center radius) shape
@@ -45,8 +52,8 @@
       )
     )))
 (defun get-intersection(ax ay bx by cx cy dx dy)
-  (declare (debug 3))
   "Returns the point where the lines intersect, or nil if they don't"
+  (declare (debug 3))
   (let* ((s1-x (- bx ax))
          (s1-y (- by ay))
          (s2-x (- dx cx))
