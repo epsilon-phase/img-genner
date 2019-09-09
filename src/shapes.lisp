@@ -86,6 +86,9 @@ in a closed path"
               )
         )
   )
+(defmethod get-segments :around ((s shape) &key (max-degree 10))
+  (get-lines (call-next-method))
+  )
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
 
 (export '(ellipse rectangle make-ellipse get-segments))

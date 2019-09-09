@@ -82,7 +82,7 @@ based on how far the coordinate is along the line"
     )
   )
 (defun calculate-bounding-box(segments)
-  (loop for i in segments
+  (loop for (i . _) in segments
         for x = (aref i 0 0) then (aref i 0 0)
         for y = (aref i 1 0) then (aref i 1 0)
         maximizing x into max-x
@@ -107,7 +107,7 @@ based on how far the coordinate is along the line"
 (defun stroke-h-line(image stroker start end)
   (let ((sx (truncate (aref start 0 0)))
         (ex (truncate (aref end 0 0)))
-        (y (truncate (aref start 1 0))))
+        (y  (truncate (aref start 1 0))))
 ;    (format t "stroking color from ~a to ~a \n" sx ex)
     (loop for i from sx to ex
           for frac = 0.0 then (/ (- i sx)
@@ -118,24 +118,28 @@ based on how far the coordinate is along the line"
   )
 (defun line-pairs(l)
   "Generate pairs of lines that can be stroked in order to fill a polygon."
-  (loop for i from 0 upto (1- (length l))
+  (loop for i in l
+        for index = 0 then (1+ index)
         with a = nil
-        with b = nil
-        when (evenp i)
-          do(setf a (elt l i))
-        when (oddp i)
-          collect `(,a . ,(elt l i))
-   )
-  )
-(defun fill-shape(segments image stroker)
-  (let* ((dim (calculate-bounding-box segments))
+        when (evenp index)
+          do (setf a i)
+        when (and (oddp index) (not (equal a i)))
+          collect `(,a . ,i)))
+(print  (line-pairs '(1 2 3 4)))
+#| TODO: This duplicates a crazy amount of work. It could be made better by
+ |       keeping a range of line segments sorted by their min-y and max-y and
+ |       updating it for each row stroked.
+ |#
+(defun fill-shape(lines image stroker)
+  (let* ((dim (calculate-bounding-box lines))
          (startx (truncate (aref (first dim) 0)))
-         (endx (truncate (aref (second dim) 0)))
+         (endx (1+ (truncate (aref (second dim) 0))))
          (starty (truncate (aref (second dim) 1)))
          (endy (truncate (aref (first dim) 1)))
-         (lines (get-lines segments))
+;         (lines (get-lines segments))
          )
-    ;(format t "Looking for intersections between y coords ~A ~A" starty endy)
+                                        ;(format t "Looking for intersections between y coords ~A ~A" starty endy)
+
     (loop for y from starty upto endy
           do(map 'list
                  (lambda (x)
@@ -149,9 +153,7 @@ based on how far the coordinate is along the line"
                                                                 (aref (car x) 0 0)
                                                                 (aref (car x) 1 0)
                                                                 (aref (cdr x) 0 0)
-                                                                (aref (cdr x) 1 0)
-                                                                )
-                                              )
+                                                                (aref (cdr x) 1 0)))
                                             lines))
                         #'compare-points)))
           )

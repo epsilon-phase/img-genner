@@ -31,5 +31,20 @@
                                      :if-does-not-exist :create)
       (png:encode b f)
       )
-  ))
-(export '(ellipse-test more-ellipses))
+    ))
+(defun nested-ellipse()
+  (let ((a (make-ellipse 50.0 50.0 50.0 50.0))
+        (b (make-ellipse 50.0 51.0 25.0 25.0))
+        (img (png:make-image 100 101 3))
+        )
+    (fill-shape (append (get-segments a :max-degree 20) (get-segments b :max-degree 4))
+                img
+                (static-color-stroker #(255 0 0))
+                )
+    (with-open-file (f "nested.png" :direction :output
+                                    :element-type '(unsigned-byte 8)
+                                    :if-exists :supersede
+                                    :if-does-not-exist :create)
+      (png:encode img f))
+    ))
+(export '(ellipse-test more-ellipses nested-ellipse))
