@@ -7,6 +7,7 @@
                (:file "src/utilities")
                (:file "src/transformations")
                (:file "src/colors")
+               (:file "src/interpolation")
                (:file "src/shapes")
                (:file "src/output")
                ))

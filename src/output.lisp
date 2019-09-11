@@ -27,17 +27,6 @@
   (let ((f (max 0 (min 1 frac))))
     (+ (* a (- 1 frac))
        (* b frac))))
-(defun lerp(p1 p2 f)
-  (typecase p1
-    (vector
-     (map 'vector
-       (lambda (a b)
-         (+
-          (* (- 1 f) a) (* f b)))
-       p1 p2))
-    (t (+ (* (- 1 f) p1) (* f b)))
-    )
-  )
 (defun static-color-stroker(color)
   (lambda (i x y frac)
     (declare (ignore frac))
@@ -66,22 +55,15 @@ based on how far the coordinate is along the line"
           for b across c2
           for z = 0 then (1+ z)
           with d = (min 1.0
-                        (max 0
-                             (/ (sqrt (+
-                                       (expt (- x center-x) 2)
-                                       (expt (- y center-y) 2)
-                                       ))
-                                maxradius)
-                             ))
+                        (/ (distance2d x y center-x center-y)
+                           maxradius))
           do(set-pixel-component i x y z
                   (coerce (truncate
                            (+ (* a (- 1 d)) (* b d)))
-                          '(unsigned-byte 8))
-                  )
-          )
-    )
-  )
+                          '(unsigned-byte 8))))))
+
 (defun calculate-bounding-box(segments)
+  "Calculate the bounding box for the given line segments"
   (loop for (i . _) in segments
         for x = (aref i 0 0) then (aref i 0 0)
         for y = (aref i 1 0) then (aref i 1 0)
@@ -92,17 +74,7 @@ based on how far the coordinate is along the line"
         finally (return
                   (list (vector min-x max-y)
                         (vector max-x min-y))
-                  )
-;          when (> x (aref bottom-right 0))
-;            do(setf (aref bottom-right 0) x)
-;          when (< x (aref top-left 0))
-;            do(setf (aref top-left 0) x)
-;          when (> y (aref top-left 1))
-;            do(setf (aref top-left 1) y)
-;          when (< y (aref bottom-right 1))
-;            do(setf (aref bottom-right 1) y)
-          )
-  )
+                  )))
 
 (defun stroke-h-line(image stroker start end)
   (let ((sx (truncate (aref start 0 0)))

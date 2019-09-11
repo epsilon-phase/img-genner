@@ -117,3 +117,8 @@
       (< (aref a 1 0) (aref b 1 0))
       (< (aref a 0 0) (aref b 0 0))
       ))
+(defun distance2d(x1 y1 x2 y2)
+  (sqrt (+ (expt (- x1 x2) 2)
+           (expt (- y1 y2) 2))))
+(defun point-distance(a b)
+  (distance2d (aref a 0 0) (aref a 1 0) (aref b 0 0) (aref b 1 0)))
