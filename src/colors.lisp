@@ -1,5 +1,5 @@
 (in-package "img-genner")
-(defvar *color-names* (make-hash-table))
+(defvar *color-names* (make-hash-table :test 'equalp))
 (defun def-color(name r g b)
   (setf (gethash name *color-names*)
         (vector r g b)))
@@ -15,7 +15,18 @@
                           (ldb (byte 8 8) c)
                           (ldb (byte 8 16) c)))
               )))
-(export '(def-hex-color def-color))
+(defun get-color(name &optional (get-alpha nil))
+  (if get-alpha
+      (copy-vector-extend (gethash name *color-names* #(0 0 0)) 255)
+      (gethash name *color-names* #(0 0 0)))
+  )
+(defun get-color-list()
+  (loop for i being the hash-keys of *color-names*
+        collect i))
+(defun make-color-rgb(r g b)
+  (apply #'vector (map 'list (lambda(x) (coerce x '(unsigned-byte 8)))
+                       `(,r ,g ,b))))
+(export '(def-hex-color def-color get-color get-color-list))
 (def-hex-color "AliceBlue" #xF0F8FF)
 (def-hex-color "AntiqueWhite" #xFAEBD7)
 (def-hex-color "Aqua" #x00FFFF)
@@ -165,8 +176,3 @@
 (def-hex-color "Yellow" #xFFFF00)
 (def-hex-color "YellowGreen" #x9ACD32)
 
-(let ((color (gethash "Yellow" *color-names*)))
-  (assert (and
-           (= (aref color 0) 255 )
-           (= (aref color 1) 255)
-           (= (aref color 2) 0))))
