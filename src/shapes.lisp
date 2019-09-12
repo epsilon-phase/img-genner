@@ -20,6 +20,13 @@
   ((topleft :initform #2A((0.0)(0.0)(0.0)))
    (width :initform 1.0 )
    (height :initform 1.0)))
+(defun make-rectangle(x y width height)
+  (let ((a (make-instance 'rectangle)))
+    (setf (slot-value a 'topleft) (point x y)
+          (slot-value a 'width) width
+          (slot-value a 'height) height)
+    a
+    ))
 (defmethod bounds((c ellipse))
   (with-slots (center radius) c
     (list
@@ -44,16 +51,26 @@
   (declare (ignore max-degree))
   (with-slots (topleft width height)
       shape
-    (with-array-items ((ox 0 0) (oy 1 0)) topleft
       (list
-       (point ox oy)
-       (point (+ ox width) oy)
-       (point (+ ox width) (- oy height))
-       (point ox (- oy height))
+       (point (aref topleft 0 0) (aref topleft 1 0))
+       (point (+ (aref topleft 0 0) width) (aref topleft 1 0))
+       (point (+ (aref topleft 0 0) width) (- (aref topleft 1 0) height))
+       (point (aref topleft 0 0) (- (aref topleft 1 0) height))
       )
-    )))
+    ))
+(defun slope(ax ay bx by)
+  (if (= ax bx) 
+      (/ (- by ay) (- bx ax)))
+  )
+(defun colinearp(ax ay bx by cx cy dx dy)
+  (if (= (slope cx cy dx dy)
+         (slope ax ay bx by));then find the y-offset
+      (= (- ay (* ax (slope ax ay bx by)))
+         (- cy (* cx (slope cx cy dx dy))))
+      )
+  )
 (defun get-intersection(ax ay bx by cx cy dx dy)
-  "Returns the point where the lines intersect, or nil if they don't"
+  "Returns the point where the lines intersect, or nil if they don't(Or if they're collinear)"
   (declare (debug 3))
   (let* ((s1-x (- bx ax))
          (s1-y (- by ay))
@@ -67,16 +84,15 @@
                      (* s1-x s2-y))
                   ))
               (t- (/
-                  (- (* s2-x (- ay cy))
-                     (* s2-y (- ax cx)))
-                  (+ (* -1 s2-x s1-y)
-                     (* s1-x s2-y))
-                  )))
+                   (- (* s2-x (- ay cy))
+                      (* s2-y (- ax cx)))
+                   (+ (* -1 s2-x s1-y)
+                      (* s1-x s2-y))
+                   )))
           (if (and (>= s 0) (<= s 1) (>= t- 0) (<= t- 1))
               (point (+ ax (* t- s1-x)) (+ ay (* t- s1-y)))
               nil))
-    )
-  )
+        ))
 (defun get-lines(segments)
   "Return a list of cons pairs of points representing lines
 in a closed path"
@@ -91,6 +107,7 @@ in a closed path"
   (get-lines (if max-degree
                  (get-points s :max-degree max-degree)
                  (get-points s))))
+
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
 
-(export '(ellipse rectangle make-ellipse get-segments))
+(export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection))

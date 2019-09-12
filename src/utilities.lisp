@@ -2,7 +2,7 @@
 
 (defmacro with-array-items(items array &body body)
   `(symbol-macrolet ,(loop for i in items
-                           collect (list (first i)  (cons 'aref (rest i)))
+                           collect (list (first i)  (cons 'aref (cons array (rest i))))
                            )
      ,@body)
   )
@@ -15,3 +15,4 @@
           do(vector-push-extend i v))
     (vector-push-extend item v)
     v))
+(print (macroexpand '(with-array-items ((a 1 2)(b 2 3)) c (setf a 2 b 5))))
