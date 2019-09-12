@@ -28,7 +28,8 @@
      (vector (+ (aref center 0 0) (svref radius 0))
              (- (aref center 1 0) (svref radius 1))))))
 (defgeneric get-segments(shape &key max-degree))
-(defmethod get-segments((shape ellipse) &key (max-degree 10))
+(defgeneric get-points(shape &key max-degree))
+(defmethod get-points((shape ellipse) &key (max-degree 10))
   (with-slots (center radius) shape
     (loop for i from 0 to max-degree
           for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
@@ -39,7 +40,7 @@
               x (+ (aref center 0 0) (* (cos angle) (aref radius 0)))))
           collect (make-array '(3 1) :initial-contents `((,x)(,y)(0.0))))
     ))
-(defmethod get-segments((shape rectangle) &key (max-degree 4))
+(defmethod get-points((shape rectangle) &key (max-degree 4))
   (declare (ignore max-degree))
   (with-slots (topleft width height)
       shape
@@ -86,9 +87,10 @@ in a closed path"
               )
         )
   )
-(defmethod get-segments :around ((s shape) &key (max-degree 10))
-  (get-lines (call-next-method))
-  )
+(defmethod get-segments :around ((s shape) &key (max-degree nil))
+  (get-lines (if max-degree
+                 (get-points s :max-degree max-degree)
+                 (get-points s))))
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
 
 (export '(ellipse rectangle make-ellipse get-segments))

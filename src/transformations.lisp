@@ -42,7 +42,6 @@
 (defun make-scale(sx sy)
   (make-transf-matrix :kind 'scale
                       :matrix (make-array '(3 3)
-                                          
                                           :initial-contents `((,sx 0.0 0.0)(0.0 ,sy 0.0) (0.0 0.0 1.0))
                                                        )))
 (defun explain-matrix(tra)
@@ -74,25 +73,6 @@
                             (reduce #'mmul (map 'list #'(lambda (x) (transf-matrix-matrix x))
                                                 (slot-value transformation 'objects)))))
   )
-(let ((a (make-rotation (coerce (* pi .25) 'single-float))))
-  (print a)
-  (print (explain-matrix a)
-          ))
-(let ((tranf (make-instance 'transformation)))
-  (loop for i from 0 to 10
-        do(add-transform tranf
-                         (case (truncate (random 3))
-                           ((0) (make-rotation (coerce (random (* 2 pi)) 'single-float)))
-                           ((1) (make-translation (random 1.3) (random 1.3)))
-                           ((2) (make-scale (random 1.3) (random 1.3)))
-                           )
-                         ))
-  (print tranf)
-  (print (slot-value tranf 'combined))
-  (map nil #'print (slot-value tranf 'objects))
-  (print (mmul
-          (transf-matrix-matrix (slot-value tranf 'combined))
-          (make-array '(3 1) :initial-contents '((3.0) (2.0) (0.0))))))
 
 (defun point(x y)
   (the single-float x)
