@@ -1,6 +1,5 @@
 (in-package "img-genner")
 (defun lerp(p1 p2 f)
-  (format t "(~a - ~a)*~a" p1 p2 f)
   (typecase p1
     (vector
      (map 'vector

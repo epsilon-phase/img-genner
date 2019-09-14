@@ -3,18 +3,23 @@
 
 (defun set-pixel(image x y color)
   "Bounds respecting color setting"
-  (declare (type fixnum x y))
+  (declare (type (fixnum x y)))
   (if (and
        (< x (array-dimension image 1))
        (< y (array-dimension image 0))
        (= (array-dimension color 0) (array-dimension image 2)))
       (loop for i across color
             for z = 0 then (1+ z)
-            do(setf (aref image (- (1- (array-dimension image 0)) y) x z) i)))
+            do(setf (aref image (min (1- (array-dimension image 0))
+                                     (- (1- (array-dimension image 0)) y))
+                          x z)
+                    i)))
   )
 
 (defun set-pixel-component(image x y c color)
   "Bounds respecting color setting, but more convenient for gradients"
+  (declare (type ((simple-array (unsigned-byte 8) '(* * *)) image)
+                 (fixnum x y c)))
   (if (and
        (< x (array-dimension image 1))
        (< y (array-dimension image 0))
@@ -29,13 +34,15 @@
        (* b frac))))
 (defun static-color-stroker(color)
   (lambda (i x y frac)
-    (declare (ignore frac))
+    (declare (ignore frac)
+             (type fixnum x y))
     (set-pixel i x y color)
     ))
 (defun gradient-color-stroker(c1 c2)
   "This returns a function that can be used to color a line/line-like object with a gradient
 based on how far the coordinate is along the line"
   (lambda (i x y frac)
+    (declare (type fixnum x y))
     (loop for a across c1
           for b across c2
           for z = 0 then (1+ z)
@@ -50,7 +57,8 @@ based on how far the coordinate is along the line"
 (defun radial-gradient-stroker(c1 c2 center-x center-y maxradius)
   "Creates a radial gradient stroker centered on a given coordinate, with a scale up to max radius"
   (lambda (i x y frac)
-    (declare (ignore frac))
+    (declare (ignore frac)
+             (type fixnum x y))
     (loop for a across c1
           for b across c2
           for z = 0 then (1+ z)
@@ -77,9 +85,13 @@ based on how far the coordinate is along the line"
                   )))
 
 (defun stroke-h-line(image stroker start end)
-  (let ((sx (truncate (aref start 0 0)))
-        (ex (truncate (aref end 0 0)))
-        (y  (truncate (aref start 1 0))))
+  (declare (optimize (speed 3))
+           (type (simple-array single-float '(3 1)) start end)
+           (type (simple-array (unsigned-byte 8) '(* * *)) image)
+           (type function stroker))
+  (let ((sx (the fixnum (truncate (aref start 0 0))))
+        (ex (the fixnum (truncate (aref end 0 0))))
+        (y  (the fixnum (truncate (aref start 1 0)))))
 ;    (format t "stroking color from ~a to ~a \n" sx ex)
     (loop for i from sx to ex
           for frac = 0.0 then (/ (- i sx)
@@ -97,7 +109,6 @@ based on how far the coordinate is along the line"
           do (setf a i)
         when (and (oddp index) (not (equal a i)))
           collect `(,a . ,i)))
-(print  (line-pairs '(1 2 3 4)))
 #| TODO: This duplicates a crazy amount of work. It could be made better by
  |       keeping a range of line segments sorted by their min-y and max-y and
  |       updating it for each row stroked.
@@ -107,11 +118,7 @@ based on how far the coordinate is along the line"
          (startx (truncate (aref (first dim) 0)))
          (endx (1+ (truncate (aref (second dim) 0))))
          (starty (truncate (aref (second dim) 1)))
-         (endy (truncate (aref (first dim) 1)))
-;         (lines (get-lines segments))
-         )
-                                        ;(format t "Looking for intersections between y coords ~A ~A" starty endy)
-
+         (endy (truncate (aref (first dim) 1))))
     (loop for y from starty upto endy
           do(map 'list
                  (lambda (x)
@@ -127,7 +134,5 @@ based on how far the coordinate is along the line"
                                                                 (aref (cdr x) 0 0)
                                                                 (aref (cdr x) 1 0)))
                                             lines))
-                        #'compare-points)))
-          )
-    ))
+                        #'compare-points))))))
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker))

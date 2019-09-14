@@ -34,6 +34,12 @@
              (+ (aref center 1 0) (svref radius 1)))
      (vector (+ (aref center 0 0) (svref radius 0))
              (- (aref center 1 0) (svref radius 1))))))
+(defmethod bounds((r rectangle))
+  (with-slots (topleft width height) r
+    (list (vector (aref topleft 0 0) (aref topleft 1 0))
+          (vector (+ width (aref topleft 0 0))
+                  (- height (aref topleft 1 0))))
+    ))
 (defgeneric get-segments(shape &key max-degree))
 (defgeneric get-points(shape &key max-degree))
 (defmethod get-points((shape ellipse) &key (max-degree 10))
@@ -58,21 +64,20 @@
        (point (aref topleft 0 0) (- (aref topleft 1 0) height))
       )
     ))
-(defun slope(ax ay bx by)
-  (if (= ax bx) 
-      (/ (- by ay) (- bx ax)))
-  )
+
 (defun colinearp(ax ay bx by cx cy dx dy)
-  (if (= (slope cx cy dx dy)
-         (slope ax ay bx by));then find the y-offset
-      (= (- ay (* ax (slope ax ay bx by)))
-         (- cy (* cx (slope cx cy dx dy))))
-      )
+  (and (= ay by) (= cy dy))
   )
 (defun get-intersection(ax ay bx by cx cy dx dy)
-  "Returns the point where the lines intersect, or nil if they don't(Or if they're collinear)"
-  (declare (debug 3))
-  (let* ((s1-x (- bx ax))
+  "Returns the point where the lines intersect, or nil if they don't(Or if they're co-linear)"
+  ;(declare (type single-float
+                 ;ax ay
+                 ;bx by
+                 ;cx cy
+                 ;dx dy)
+                                        ;(optimize 3))
+  (if (colinearp ax ay bx by cx cy dx dy) nil
+        (let* ((s1-x (- bx ax))
          (s1-y (- by ay))
          (s2-x (- dx cx))
          (s2-y (- dy cy))
@@ -92,7 +97,7 @@
           (if (and (>= s 0) (<= s 1) (>= t- 0) (<= t- 1))
               (point (+ ax (* t- s1-x)) (+ ay (* t- s1-y)))
               nil))
-        ))
+        )))
 (defun get-lines(segments)
   "Return a list of cons pairs of points representing lines
 in a closed path"
@@ -103,7 +108,7 @@ in a closed path"
               )
         )
   )
-(defmethod get-segments :around ((s shape) &key (max-degree nil))
+(defmethod get-segments ((s shape) &key (max-degree nil))
   (get-lines (if max-degree
                  (get-points s :max-degree max-degree)
                  (get-points s))))
