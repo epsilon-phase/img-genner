@@ -113,7 +113,7 @@ based on how far the coordinate is along the line"
  |       keeping a range of line segments sorted by their min-y and max-y and
  |       updating it for each row stroked.
  |#
-(defun fill-shape(lines image stroker)
+(defun fill-polygon(lines image stroker)
   (let* ((dim (calculate-bounding-box lines))
          (startx (truncate (aref (first dim) 0)))
          (endx (1+ (truncate (aref (second dim) 0))))
@@ -177,5 +177,13 @@ based on how far the coordinate is along the line"
           for x = (truncate (aref topleft 0 0)) then (1+ x)
           do(funcall stroker image x y 0.0))))
   )
+(defgeneric fill-shape(shape image stroker))
+(defmethod fill-shape((r rectangle) image stroker)
+  (fill-rectangle r image stroker))
+(defmethod fill-shape((e ellipse) image stroker)
+  (fill-ellipse e image stroker))
+(defmethod fill-shape((p t) image stroker)
+  (fill-polygon e image stroker))
+
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker fill-ellipse
           fill-rectangle fill-ellipse-loopless))
