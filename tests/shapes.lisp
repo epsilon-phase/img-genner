@@ -1,4 +1,4 @@
-(in-package img-genner/test)
+(in-package img-genner/tests)
 (use-package :img-genner)
 (defun distance(a)
   (sqrt (+ (expt (aref a 0 0) 2)
@@ -10,7 +10,7 @@
           do(ok (not
                  (remove-if (lambda(x) (> 0.001 (abs (- 3 (distance x)))))
                             (get-points c :max-degree i))
-                 ))
+                 ) (format nil "Checking Distance with ~a vertices" i))
           )
           )
   )
@@ -21,7 +21,8 @@
                   #2A((1.0)(-1.0)(0.0))
                   #2A((0.0)(-1.0)(0.0))
                   )
-                (get-points (make-rectangle 0.0 0.0 1.0 1.0))))))
+                (get-points (make-rectangle 0.0 0.0 1.0 1.0)))
+        "Rectangle correctness")))
 (deftest intersection-stuff
   (testing "Intersection exists"
     (ok (equalp #2a((0.0)(0.5)(0.0))
@@ -36,3 +37,19 @@
     (ng (get-intersection 0.0 0.0 0.5 0.5 1.0 1.0 1.0 0.0))
     )
   )
+(deftest ellipse-fill
+  (testing "Non-variance"
+    (let ((image (png:make-image 10 10 1)))
+      (ok (equalp (fill-ellipse (make-ellipse 5.0 5.0 5.0 5.0) image (static-color-stroker #(255)))
+                  #3A(((0) (0) (255) (255) (255) (255) (255) (255) (255) (0))
+                      ((0) (255) (255) (255) (255) (255) (255) (255) (255) (255))
+                      ((0) (255) (255) (255) (255) (255) (255) (255) (255) (255))
+                      ((0) (255) (255) (255) (255) (255) (255) (255) (255) (255))
+                      ((0) (255) (255) (255) (255) (255) (255) (255) (255) (255))
+                      ((0) (255) (255) (255) (255) (255) (255) (255) (255) (255))
+                      ((0) (255) (255) (255) (255) (255) (255) (255) (255) (255))
+                      ((0) (255) (255) (255) (255) (255) (255) (255) (255) (255))
+                      ((0) (0) (255) (255) (255) (255) (255) (255) (255) (0))
+                      ((0) (0) (0) (0) (0) (0) (0) (0) (0) (0)))
+                  )
+          "Equal, as they ought to be"))))
