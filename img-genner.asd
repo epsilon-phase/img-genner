@@ -2,7 +2,7 @@
   :version "0.0.1"
   :author "Violet White"
   :licence "Nonviolent Public License"
-  :depends-on ("png" "rove")
+  :depends-on ("png")
   :components ((:file "src/package")
                (:file "src/utilities")
                (:file "src/transformations")

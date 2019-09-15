@@ -17,9 +17,9 @@
     )
   )
 (defclass rectangle(shape)
-  ((topleft :initform #2A((0.0)(0.0)(0.0)))
-   (width :initform 1.0 )
-   (height :initform 1.0)))
+  ((topleft :initform #2A((0.0)(0.0)(0.0)) :type (simple-array '(3 1) single-float))
+   (width :initform 1.0 :type single-float)
+   (height :initform 1.0 :type single-float)))
 (defun make-rectangle(x y width height)
   (let ((a (make-instance 'rectangle)))
     (setf (slot-value a 'topleft) (point x y)
@@ -66,10 +66,16 @@
     ))
 
 (defun colinearp(ax ay bx by cx cy dx dy)
-  (and (= ay by) (= cy dy))
+  (declare (type (or fixnum single-float);Does this have effect?
+                 ax ay
+                 bx by
+                 dx dy))
+  (or (and (= ax bx) (= cx dx))
+      (and (= ay by) (= cy dy)))
   )
 (defun get-intersection(ax ay bx by cx cy dx dy)
-  "Returns the point where the lines intersect, or nil if they don't(Or if they're co-linear)"
+  "Returns the point where the lines intersect, or nil if they don't.
+Avoids lines that have zero determinants"
   ;(declare (type single-float
                  ;ax ay
                  ;bx by

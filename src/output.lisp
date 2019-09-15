@@ -5,8 +5,8 @@
   "Bounds respecting color setting"
   (declare (type (fixnum x y)))
   (if (and
-       (< x (array-dimension image 1))
-       (< y (array-dimension image 0))
+       (< 0 x (array-dimension image 1))
+       (< 0 y (array-dimension image 0))
        (= (array-dimension color 0) (array-dimension image 2)))
       (loop for i across color
             for z = 0 then (1+ z)
@@ -35,7 +35,8 @@
 (defun static-color-stroker(color)
   (lambda (i x y frac)
     (declare (ignore frac)
-             (type fixnum x y))
+             (type fixnum x y)
+             (dynamic-extent color))
     (set-pixel i x y color)
     ))
 (defun gradient-color-stroker(c1 c2)
@@ -86,18 +87,15 @@ based on how far the coordinate is along the line"
 
 (defun stroke-h-line(image stroker start end)
   (declare (optimize (speed 3))
-           (type (simple-array single-float '(3 1)) start end)
-           (type (simple-array (unsigned-byte 8) '(* * *)) image)
+           (type (simple-array single-float (3 1)) start end)
+           (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type function stroker))
   (let ((sx (the fixnum (truncate (aref start 0 0))))
         (ex (the fixnum (truncate (aref end 0 0))))
         (y  (the fixnum (truncate (aref start 1 0)))))
 ;    (format t "stroking color from ~a to ~a \n" sx ex)
     (loop for i from sx to ex
-          for frac = 0.0 then (/ (- i sx)
-                                 (- ex
-                                    sx))
-          do (funcall stroker image i y frac)
+          do (funcall stroker image i y 0.0)
           ))
   )
 (defun line-pairs(l)
@@ -109,6 +107,8 @@ based on how far the coordinate is along the line"
           do (setf a i)
         when (and (oddp index) (not (equal a i)))
           collect `(,a . ,i)))
+(defun stroke-line(a b image)
+  )
 #| TODO: This duplicates a crazy amount of work. It could be made better by
  |       keeping a range of line segments sorted by their min-y and max-y and
  |       updating it for each row stroked.
@@ -134,5 +134,48 @@ based on how far the coordinate is along the line"
                                                                 (aref (cdr x) 0 0)
                                                                 (aref (cdr x) 1 0)))
                                             lines))
-                        #'compare-points))))))
-(export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker))
+                        #'compare-points)))))
+  image)
+(defun fill-ellipse(ellipse image stroker)
+  (with-slots (radius center) ellipse
+    (loop for y from 0 to (aref radius 1)
+          with cx = (truncate (aref center 0 0))
+          with cy = (truncate (aref center 1 0))
+          with ry = (truncate (expt (aref radius 1) 2))
+          with rx = (truncate (expt (aref radius 0) 2))
+          do(loop for x from 0 to (sqrt (* rx (- 1 (/ (* y y) ry))))
+                  do(progn
+                      (funcall stroker image (+ cx x) (+ cy y) 0.0)
+                      (funcall stroker image (- cx x) (+ cy y) 0.0)
+                      (funcall stroker image (- cx x) (- cy y) 0.0)
+                      (funcall stroker image (+ cx x) (- cy y) 0.0))
+                  )
+          )
+    )
+  image)
+(defun fill-ellipse-loopless(ellipse image stroker)
+  (with-slots (radius center) ellipse
+    (let ((cx (truncate (aref center 0 0)))
+          (cy (truncate (aref center 1 0)))
+          (ry (truncate (expt (aref radius 1) 2)))
+          (rx (truncate (expt (aref radius 0) 2))))
+      (dotimes (y (truncate (aref radius 1)))
+        (dotimes (x (truncate (sqrt (* rx (- 1 (/ (* y y) ry))))))
+          (funcall stroker image (+ cx x) (+ cy y) 0.0)
+          (funcall stroker image (- cx x) (+ cy y) 0.0)
+          (funcall stroker image (- cx x) (- cy y) 0.0)
+          (funcall stroker image (+ cx x) (- cy y) 0.0)
+          ))))
+  image)
+(defun fill-rectangle(rectangle image stroker)
+  (with-slots (topleft width height) rectangle
+    (loop
+      repeat height
+      for y = (truncate (aref topleft 1 0)) then (1- y)
+      do(loop
+          repeat width
+          for x = (truncate (aref topleft 0 0)) then (1+ x)
+          do(funcall stroker image x y 0.0))))
+  )
+(export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker fill-ellipse
+          fill-rectangle fill-ellipse-loopless))

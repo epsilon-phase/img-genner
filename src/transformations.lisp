@@ -75,9 +75,7 @@
   )
 
 (defun point(x y)
-  (the single-float x)
-  (the single-float y)
-  (make-array '(3 1) :element-type 'single-float :initial-contents `((,x) (,y) (0.0))))
+  (make-array '(3 1) :element-type 'single-float :initial-contents `((,(coerce x 'single-float)) (,(coerce y 'single-float)) (0.0))))
 
 (defmethod transform((tr transformation) (m array))
   (mmul (transf-matrix-matrix  (slot-value tr 'combined)) m)
@@ -91,6 +89,9 @@
   (loop for i in body
         collect `(transform ,tr ,i))
   )
+                                        ;TODO remove most of the transform code,
+                                        ;it's both not used and not pleasant to
+                                        ;work with, in our opinion
 
 (defun compare-points(a b)
   (if (= (aref a 0 0) (aref b 0 0))
