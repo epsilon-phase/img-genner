@@ -6,7 +6,7 @@
 
 (let ((little-endian (member :little-endian *features*)))
       (defun def-hex-color(name c)
-        (setf (gethash name *color-names*)
+        (setf (gethash (string-downcase name) *color-names*)
               (if little-endian
                   (vector (ldb (byte 8 16) c)
                           (ldb (byte 8 8) c)
@@ -17,8 +17,8 @@
               )))
 (defun get-color(name &optional (get-alpha nil))
   (if get-alpha
-      (copy-vector-extend (gethash name *color-names* #(0 0 0)) 255)
-      (gethash name *color-names* #(0 0 0)))
+      (copy-vector-extend (gethash (string-downcase name) *color-names* #(0 0 0)) 255)
+      (gethash (string-downcase name) *color-names* #(0 0 0)))
   )
 (defun get-color-list()
   (loop for i being the hash-keys of *color-names*
@@ -26,7 +26,12 @@
 (defun make-color-rgb(r g b)
   (apply #'vector (map 'list (lambda(x) (coerce x '(unsigned-byte 8)))
                        `(,r ,g ,b))))
-(export '(def-hex-color def-color get-color get-color-list))
+(defun get-random-color()
+  (loop repeat (random (hash-table-count *color-names*))
+        for i being the hash-keys of *color-names*
+        finally(return (values (get-color i) i))))
+(export '(def-hex-color def-color get-color get-color-list get-random-color))
+#|Copied from the W3C CSS color table |#
 (def-hex-color "AliceBlue" #xF0F8FF)
 (def-hex-color "AntiqueWhite" #xFAEBD7)
 (def-hex-color "Aqua" #x00FFFF)
