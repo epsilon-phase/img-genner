@@ -1,4 +1,3 @@
-(require 'png)
 (in-package img-genner/examples)
 (use-package :img-genner)
 (defun ellipse-test()
@@ -69,4 +68,23 @@
                                          :if-exists :supersede
                                          :if-does-not-exist :create)
       (png:encode image f))))
-(export '(ellipse-test more-ellipses nested-ellipse specialized-filler))
+(defun point(x y)
+  (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0))))
+(defun ellipse-rotation()
+  (let ((ellipses (map 'list
+                       (lambda(x)
+                         (make-instance 'ellipse :center (point (* (1+ x) 20.0) 20.0)
+                                                 :radius #(10.0 20.0)
+                                                 :rotation (* x (/ (coerce pi 'single-float)
+                                                                   (* 2 5))))
+                                           )
+                       '(0.0 1.0 2.0 3.0 4.0 5.0)))
+        (image (png:make-image 40 100 3))
+        (colors (loop repeat 5 collect(get-random-color))))
+    (loop for e in ellipses
+          for c in colors
+          do(fill-ellipse e image (static-color-stroker c)))
+    (png:encode-file image "ellipse-rotation.png")
+    )
+  )
+(export '(ellipse-test more-ellipses nested-ellipse specialized-filler ellipse-rotation))

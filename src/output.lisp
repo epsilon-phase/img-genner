@@ -3,7 +3,7 @@
 
 (defun set-pixel(image x y color)
   "Bounds respecting color setting"
-  (declare (type (fixnum x y)))
+  (declare (type fixnum x y))
   (if (and
        (< 0 x (array-dimension image 1))
        (< 0 y (array-dimension image 0))
@@ -18,8 +18,8 @@
 
 (defun set-pixel-component(image x y c color)
   "Bounds respecting color setting, but more convenient for gradients"
-  (declare (type ((simple-array (unsigned-byte 8) '(* * *)) image)
-                 (fixnum x y c)))
+  (declare (type (simple-array (unsigned-byte 8) (* * *)) image)
+           (type fixnum x y c))
   (if (and
        (< x (array-dimension image 1))
        (< y (array-dimension image 0))
@@ -107,7 +107,37 @@ based on how far the coordinate is along the line"
           do (setf a i)
         when (and (oddp index) (not (equal a i)))
           collect `(,a . ,i)))
-(defun stroke-line(a b image)
+(defun stroke-line(a b image stroker)
+  (declare (type (simple-array (unsigned-byte 8) (* * *)))
+           (type function stroker)
+           (type (simple-array single-float (3 1)) a b))
+  (let ((x1 (truncate (aref a 0 0)))
+        (y1 (truncate (aref a 1 0)))
+        (x2 (truncate (aref b 0 0)))
+        (y2 (truncate (aref b 1 0))))
+    (declare (type fixnum x1 y1 x2 y2))
+    (let* ((dist-x (abs (- x2 x1)))
+           (dist-y (abs (- y2 y1)))
+           (steep (> dist-y dist-x)))
+      (when steep
+        (psetf x1 y1 y1 x1
+               x2 y2 y2 x2))
+      (when (> x2 x1)
+        (psetf x1 x2 x2 x1))
+      (let* ((delta-x (- x2 x1))
+             (delta-y (- y2 y1))
+             (err (floor delta-x 2))
+             (y-step (if (< y1 y2) 1 -1))
+             (y y1))
+        (loop for x upfrom x1 to x2
+              do(if steep
+                    (funcall stroker image y x 0.0)
+                    (funcall stroker image x y 0.0))
+                (setf err (- err delta-y))
+                (when (< err 0)
+                  (incf y y-step)
+                  (incf err delta-x))))))
+  image
   )
 #| TODO: This duplicates a crazy amount of work. It could be made better by
  |       keeping a range of line segments sorted by their min-y and max-y and
@@ -138,20 +168,32 @@ based on how far the coordinate is along the line"
   image)
 (defun fill-ellipse(ellipse image stroker)
   (with-slots (radius center) ellipse
-    (loop for y from 0 to (aref radius 1)
+    (if (zerop (slot-value ellipse 'rotation))
+     (loop for y from 0 to (aref radius 1)
           with cx = (truncate (aref center 0 0))
           with cy = (truncate (aref center 1 0))
           with ry = (truncate (expt (aref radius 1) 2))
           with rx = (truncate (expt (aref radius 0) 2))
           do(loop for x from 0 to (sqrt (* rx (- 1 (/ (* y y) ry))))
                   do(progn
-                      (funcall stroker image (+ cx x) (+ cy y) 0.0)
-                      (funcall stroker image (- cx x) (+ cy y) 0.0)
-                      (funcall stroker image (- cx x) (- cy y) 0.0)
-                      (funcall stroker image (+ cx x) (- cy y) 0.0))
+                        (funcall stroker image (+ cx x) (+ cy y) 0.0)
+                        (funcall stroker image (- cx x) (+ cy y) 0.0)
+                        (funcall stroker image (- cx x) (- cy y) 0.0)
+                        (funcall stroker image (+ cx x) (- cy y) 0.0))
                   )
-          )
-    )
+           )
+       (loop for y from (* -1 (aref radius 1)) to (aref radius 1)
+           with cx = (truncate (aref center 0 0))
+           with cy = (truncate (aref center 1 0))
+           with rx = (truncate (expt (aref radius 0) 2))
+           with ry = (truncate (expt (aref radius 1) 2))
+           do(loop for x from (* -1 (sqrt (* rx (- 1 (/ (* y y)
+                                                        ry)) )))
+                                 to (sqrt (* rx (- 1 (/ (* y y) ry))))
+                                 do(multiple-value-bind (ex ey)
+                                       (adjust-point x y (slot-value ellipse 'rotation))
+                                     (funcall stroker image (+ cx (truncate ex))
+                                              (+ cy (truncate ey)) 0.0))))))
   image)
 (defun fill-ellipse-loopless(ellipse image stroker)
   (with-slots (radius center) ellipse
@@ -183,7 +225,7 @@ based on how far the coordinate is along the line"
 (defmethod fill-shape((e ellipse) image stroker)
   (fill-ellipse e image stroker))
 (defmethod fill-shape((p t) image stroker)
-  (fill-polygon e image stroker))
+  (fill-polygon p image stroker))
 
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker fill-ellipse
           fill-rectangle fill-ellipse-loopless))

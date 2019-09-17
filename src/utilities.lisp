@@ -1,10 +1,11 @@
 (in-package "img-genner")
 
 (defmacro with-array-items(items array &body body)
-  `(symbol-macrolet ,(loop for i in items
-                           collect (list (first i)  (cons 'aref (cons array (rest i))))
+  (let ((g (gensym)))
+    `(let ((,g ,array))(symbol-macrolet ,(loop for i in items
+                           collect (list (first i)  (cons 'aref (cons g (rest i))))
                            )
-     ,@body)
+     ,@body)))
   )
 (defun copy-vector-extend(vec item)
   (let ((v (make-array (1+ (array-dimension vec 0))
