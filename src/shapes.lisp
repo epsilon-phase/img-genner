@@ -63,25 +63,33 @@
                   (- height (aref topleft 1 0))))
     ))
 (defmethod get-points((shape ellipse) &key (max-degree 10))
-  (with-slots (center radius) shape
+  (with-slots (center radius rotation) shape
     (loop for i from 0 to max-degree
           for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
           with x = 0.0
           with y = 0.0
-          do(progn
-              (setf y (+ (aref center 1 0) (* (sin angle) (aref radius 1)))
-              x (+ (aref center 0 0) (* (cos angle) (aref radius 0)))))
+          do(multiple-value-bind (ex ey) (adjust-point
+                                          (* (svref radius 0)
+                                             (cos angle))
+                                          (* (svref radius 1)
+                                             (sin angle))
+                                          rotation)
+              (setf y (+ (aref center 1 0) ey)
+                    x (+ (aref center 0 0) ex)))
           collect (make-array '(3 1) :initial-contents `((,x)(,y)(0.0))))
     ))
 (defmethod get-points((shape rectangle) &key (max-degree 4))
   (declare (ignore max-degree))
-  (with-slots (topleft width height)
+  (with-slots (topleft width height rotation)
       shape
+    (multiple-value-bind (e-width e-height)
+        (adjust-point width height rotation)
       (list
        (point (aref topleft 0 0) (aref topleft 1 0))
-       (point (+ (aref topleft 0 0) width) (aref topleft 1 0))
-       (point (+ (aref topleft 0 0) width) (- (aref topleft 1 0) height))
-       (point (aref topleft 0 0) (- (aref topleft 1 0) height))
+       (point (+ (aref topleft 0 0) e-width) (aref topleft 1 0))
+       (point (+ (aref topleft 0 0) e-width) (- (aref topleft 1 0) e-height))
+       (point (aref topleft 0 0) (- (aref topleft 1 0) e-height))
+       )
       )
     ))
 
