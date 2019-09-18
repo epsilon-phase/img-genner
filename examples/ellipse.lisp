@@ -83,7 +83,7 @@
         (colors (loop repeat (length ellipses) collect(get-random-color))))
     (loop for e in ellipses
           for c in colors
-          do(fill-ellipse-lines e image (static-color-stroker c)))
+          do(fill-ellipse e image (static-color-stroker c)))
     (png:encode-file image "ellipse-rotation.png")
     )
   )

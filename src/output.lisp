@@ -1,6 +1,6 @@
 (require 'png)
 (in-package "img-genner")
-
+;TODO add assertions for color type checking.
 (defun set-pixel(image x y color)
   "Bounds respecting color setting"
   (declare (type fixnum x y))
@@ -12,8 +12,7 @@
             for z = 0 then (1+ z)
             do(setf (aref image (min (1- (array-dimension image 0))
                                      (- (1- (array-dimension image 0)) y))
-                          x z)
-                    i)))
+                          x z) i)))
   )
 
 (defun set-pixel-component(image x y c color)
@@ -21,10 +20,10 @@
   (declare (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type fixnum x y c))
   (if (and
-       (< x (array-dimension image 1))
-       (< y (array-dimension image 0))
+       (< 0 x (array-dimension image 1))
+       (< 0 y (array-dimension image 0))
        (< c (array-dimension image 2)))
-      (setf (aref image y x c) color)
+      (setf (aref image (min (1- (array-dimension image 0)) (- (1- (array-dimension image 0)) y)) x c) color)
       )
   )
 (defun interpolate(max a b frac)
@@ -55,7 +54,8 @@ based on how far the coordinate is along the line"
           )
     )
   )
-(defun radial-gradient-stroker(c1 c2 center-x center-y maxradius)
+(defun radial-gradient-stroker(c1 c2 center-x center-y maxradius
+                               &optional (distance-function #'distance2d))
   "Creates a radial gradient stroker centered on a given coordinate, with a scale up to max radius"
   (lambda (i x y frac)
     (declare (ignore frac)
@@ -64,7 +64,7 @@ based on how far the coordinate is along the line"
           for b across c2
           for z = 0 then (1+ z)
           with d = (min 1.0
-                        (/ (distance2d x y center-x center-y)
+                        (/ (funcall distance-function x y center-x center-y)
                            maxradius))
           do(set-pixel-component i x y z
                   (coerce (truncate
@@ -126,18 +126,17 @@ based on how far the coordinate is along the line"
       (when (< x2 x1)
         (psetf x1 x2 x2 x1
                y1 y2 y2 y1))
-      (format t "x1=~a y1=~a x2=~a y2=~a" x1 y1 x2 y2)
-      (terpri)
+;      (format t "x1=~a y1=~a x2=~a y2=~a" x1 y1 x2 y2)
+ ;     (terpri)
       (let* ((delta-x (- x2 x1))
              (delta-y (abs (- y2 y1)))
              (err (floor delta-x 2))
              (y-step (if (< y1 y2) 1 -1))
              (y y1))
         (loop for x from x1 to x2
-              do(Print x)
               do(progn
-                  (format t "~a,~a +~a ~~~a" x y y-step err)
-                  (terpri)
+                ;  (format t "~a,~a +~a ~~~a" x y y-step err)
+  ;                (terpri)
                   (if steep
                       (funcall stroker image y x 0.0)
                       (funcall stroker image x y 0.0))
@@ -174,7 +173,7 @@ based on how far the coordinate is along the line"
                                             lines))
                         #'compare-points)))))
   image)
-(defun fill-ellipse(ellipse image stroker)
+#|(defun fill-ellipse(ellipse image stroker)
   (with-slots (radius center) ellipse
     (if (zerop (slot-value ellipse 'rotation))
      (loop for y from 0 to (aref radius 1)
@@ -198,12 +197,23 @@ based on how far the coordinate is along the line"
            do(loop for x from (* -1 (sqrt (* rx (- 1 (/ (* y y)
                                                         ry)) )))
                                  to (sqrt (* rx (- 1 (/ (* y y) ry))))
-                                 do(multiple-value-bind (ex ey)
-                                       (adjust-point x y (slot-value ellipse 'rotation))
-                                     (funcall stroker image (+ cx (truncate ex))
-                                              (+ cy (truncate ey)) 0.0))))))
+                   do(progn
+                       (multiple-value-bind (ex ey)
+                           (adjust-point x y (slot-value ellipse 'rotation))
+                         (funcall stroker image (+ cx (truncate ex))
+                                  (+ cy (truncate ey)) 0.0))
+                       (multiple-value-bind (ex ey) (adjust-point (- x) y
+                                                                  (slot-value ellipse 'rotation))
+                         (funcall stroker image (+ cx (truncate ex))
+                                  (+ cy (truncate ey)) 0.0
+                                  )
+                         )
+                       (multiple-value-bind (ex ey) (adjust-point (- x) (- y) (slot-value ellipse 'rotation))
+                         (funcall stroker image (+ cx (truncate ex)) (+ cy (truncate ey)) 0.0))
+                       )))))
   image)
-(defun fill-ellipse-lines(ellipse image stroker)
+|#
+(defun fill-ellipse(ellipse image stroker)
   (with-slots (center radius rotation) ellipse
     (loop for y from (- (svref radius 1)) to (svref radius 1) by 0.5
           with cx = (aref center 0 0)
@@ -213,20 +223,31 @@ based on how far the coordinate is along the line"
               (multiple-value-bind (ex1 ey1) (adjust-point x y rotation)
                 (multiple-value-bind (ex2 ey2) (adjust-point (- 0 x) y rotation)
                   (stroke-line (+ ex1 cx) (+ ey1 cy) (+ cx ex2) (+ cy ey2) image stroker)
-                  ))
+                  )
+                (multiple-value-bind (ex2 ey2) (adjust-point (- x) (- y) rotation)
+                  (stroke-line (+ ex1 cx) (+ ey1 cy) (+ cx ex2) (+ cy ey2) image stroker)
+                  )
+                )
               )
     ))
   image)
 (defun fill-rectangle(rectangle image stroker)
-  (with-slots (topleft width height) rectangle
+  (with-slots (topleft width height rotation) rectangle
     (loop
       repeat height
-      for y = (truncate (aref topleft 1 0)) then (1- y)
-      do(loop
-          repeat width
-          for x = (truncate (aref topleft 0 0)) then (1+ x)
-          do(funcall stroker image x y 0.0))))
-  )
+      for y = (truncate (aref topleft 1 0)) then (1- y )
+      with ty = (aref topleft 1 0)
+      with tx = (aref topleft 0 0)
+      do(multiple-value-bind (e-width1 e-height1)
+            (adjust-point width (- y) rotation)
+          (multiple-value-bind (e-width2 e-height2)
+              (adjust-point 0 (- y) rotation)
+            (stroke-line (+ tx e-width2)
+                         (- ty e-height2)
+                         (+ tx e-width1)
+                         (- ty e-height1)
+                         image stroker)
+            )))))
 (defgeneric fill-shape(shape image stroker))
 (defmethod fill-shape((r rectangle) image stroker)
   (fill-rectangle r image stroker))
@@ -235,5 +256,5 @@ based on how far the coordinate is along the line"
 (defmethod fill-shape((p t) image stroker)
   (fill-polygon p image stroker))
 
-(export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker fill-ellipse
-          fill-rectangle fill-ellipse-lines))
+(export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
+          fill-rectangle fill-ellipse))
