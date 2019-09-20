@@ -235,7 +235,7 @@ based on how far the coordinate is along the line"
   (with-slots (topleft width height rotation) rectangle
     (loop
       repeat height
-      for y = (truncate (aref topleft 1 0)) then (1- y )
+      for y = height then (1- y)
       with ty = (aref topleft 1 0)
       with tx = (aref topleft 0 0)
       do(multiple-value-bind (e-width1 e-height1)
@@ -247,7 +247,8 @@ based on how far the coordinate is along the line"
                          (+ tx e-width1)
                          (- ty e-height1)
                          image stroker)
-            )))))
+            ))))
+  image)
 (defgeneric fill-shape(shape image stroker))
 (defmethod fill-shape((r rectangle) image stroker)
   (fill-rectangle r image stroker))
