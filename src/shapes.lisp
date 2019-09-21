@@ -1,7 +1,8 @@
 (in-package "img-genner")
 
 (defclass shape()
-  ((rotation :initform 0.0 :initarg :rotation :type single-float)))
+  ((rotation :initform 0.0 :initarg :rotation :type single-float)
+   (origin :initform #2a((0.0)(0.0)(0.0)) :initarg :origin :type (simple-array single-float (3 1)))))
 (defgeneric bounds(s))
 (defgeneric move-to(shape x y))
 (defgeneric get-segments(shape &key max-degree))
@@ -17,18 +18,23 @@
               c-theta (cos theta)
               s-theta (sin theta)))
     (values (- (* c-theta x) (* s-theta y))
-             (+ (* s-theta x) (* c-theta y)))))
-(defclass ellipse(shape)
-  ((center :initform #2A((0.0)(0.0)(0.0)) :initarg :center :type (simple-array single-float '(3 1)))
-   (radius :initform #(1.0 1.0) :initarg :radius))
+            (+ (* s-theta x) (* c-theta y)))))
+(defun to-shape-space(point shape)
+  (let ((point (sub-point point (slot-value shape 'origin))))
+    (multiple-value-call #'point (adjust-point (aref point 0 0)
+                                               (aref point 1 0)
+                                               (slot-value shape 'rotation))))
   )
-(defmethod move-to((e ellipse) x y)
-  (setf (aref (slot-value e 'center) 0 0) (coerce 'single-float x)
-        (aref (slot-value e 'center) 1 0) (coerce 'single-float y)))
+(defclass ellipse(shape)
+   ((radius :initform #(1.0 1.0) :initarg :radius))
+  )
+(defmethod move-to((e shape) x y)
+  (setf (aref (slot-value e 'origin) 0 0) (coerce 'single-float x)
+        (aref (slot-value e 'origin) 1 0) (coerce 'single-float y)))
 (defun make-ellipse(center-x center-y radius-x radius-y)
   "Convenience function for ellipse-creation."
   (let ((a (make-instance 'ellipse)))
-    (setf (slot-value a 'center)
+    (setf (slot-value a 'origin)
           (point center-x center-y)
           (slot-value a 'radius)
           (vector radius-x radius-y))
@@ -36,54 +42,72 @@
     )
   )
 (defclass rectangle(shape)
-  ((topleft :initform #2A((0.0)(0.0)(0.0)) :initarg :topleft :type (simple-array single-float (3 1)))
+  (
    (width :initform 1.0 :type single-float :initarg :width)
    (height :initform 1.0 :type single-float :initarg :height)))
 (defmethod move-to((r rectangle) x y)
-  (setf (aref (slot-value r 'topleft) 0 0) (coerce 'single-float x)
-        (aref (slot-value r 'topleft) 1 0) (coerce 'single-float y)))
+  (setf (aref (slot-value r 'origin) 0 0) (coerce 'single-float x)
+        (aref (slot-value r 'origin) 1 0) (coerce 'single-float y)))
 (defun make-rectangle(x y width height)
   (let ((a (make-instance 'rectangle)))
-    (setf (slot-value a 'topleft) (point x y)
+    (setf (slot-value a 'origin) (point x y)
           (slot-value a 'width) width
           (slot-value a 'height) height)
     a
     ))
 (defmethod bounds((c ellipse))
-  (with-slots (center radius) c
+  (with-slots (origin radius) c
     (list
-     (vector (- (aref center 0 0) (svref radius 0))
-             (+ (aref center 1 0) (svref radius 1)))
-     (vector (+ (aref center 0 0) (svref radius 0))
-             (- (aref center 1 0) (svref radius 1))))))
+     (vector (- (aref origin 0 0) (svref radius 0))
+             (+ (aref origin 1 0) (svref radius 1)))
+     (vector (+ (aref origin 0 0) (svref radius 0))
+             (- (aref origin 1 0) (svref radius 1))))))
 (defmethod bounds((r rectangle))
-  (with-slots (topleft width height) r
-    (list (vector (aref topleft 0 0) (aref topleft 1 0))
-          (vector (+ width (aref topleft 0 0))
-                  (- height (aref topleft 1 0))))
+  (with-slots (origin width height) r
+    (list (vector (aref origin 0 0) (aref origin 1 0))
+          (vector (+ width (aref origin 0 0))
+                  (- height (aref origin 1 0))))
     ))
+(defgeneric inside-shape(point shape))
+(defmethod inside-shape(p (e ellipse))
+  (let* ((p2 (to-shape-space p e)))
+    (<=
+     (+ (/
+         (expt (aref p2 0 0) 2)
+         (expt (svref (slot-value e 'radius) 0) 2))
+        (/ (expt (aref p2 1 0) 2)
+           (expt (svref (slot-value e 'radius) 1) 2)))
+     1.0)))
+(defmethod inside-shape(p (r rectangle))
+  (let ((p (to-shape-space p r)))
+    (with-slots (width height)
+        (and
+         (<= 0.0 (aref p 0 0) width)
+         (>= 0.0 (aref p 1 0) height))))
+  )
+;;Handle adjusting the points obtained by both the origin(translation) and
+;;the rotation.
+(defmethod get-points :around ((s shape)&key (max-degree 10))
+  (with-slots (origin rotation) s
+    (map 'list (lambda (x) (add-point (multiple-value-call #'point
+                                        (adjust-point (aref x 0 0) (aref x 1 0) rotation))
+                                      origin))
+         (call-next-method s :max-degree max-degree)))
+  )
 (defmethod get-points((shape ellipse) &key (max-degree 10))
-  (with-slots (center radius rotation) shape
+  (with-slots (radius rotation) shape
     (loop for i from 0 to max-degree
           for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
-          with x = 0.0
-          with y = 0.0
-          do(multiple-value-bind (ex ey) (adjust-point
-                                          (* (svref radius 0)
-                                             (cos angle))
-                                          (* (svref radius 1)
-                                             (sin angle))
-                                          rotation)
-              (setf y (+ (aref center 1 0) ey)
-                    x (+ (aref center 0 0) ex)))
-          collect (make-array '(3 1) :initial-contents `((,x)(,y)(0.0))))
+          collect(make-array '(3 1) :initial-contents `((,(* (svref radius 0) (cos angle)))
+                                                        (,(* (svref radius 1) (sin angle)))
+                                                        (0.0))))
     ))
 (defmethod get-points((shape rectangle) &key (max-degree 4))
   (declare (ignore max-degree))
-  (with-slots (topleft width height rotation)
+  (with-slots (origin width height rotation)
       shape
     (map 'list
-         (lambda (x) (add-point topleft x))
+         (lambda (x) (add-point origin x))
          (map 'list (lambda (x y)
                       (multiple-value-call #'point (adjust-point x y rotation)))
               (list 0.0 width width 0.0)

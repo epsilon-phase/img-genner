@@ -1,4 +1,4 @@
-(require 'png)
+(require :png)
 (in-package "img-genner")
 ;TODO add assertions for color type checking.
 (defun set-pixel(image x y color)
@@ -214,10 +214,10 @@ based on how far the coordinate is along the line"
   image)
 |#
 (defun fill-ellipse(ellipse image stroker)
-  (with-slots (center radius rotation) ellipse
+  (with-slots (origin radius rotation) ellipse
     (loop for y from (- (svref radius 1)) to (svref radius 1) by 0.5
-          with cx = (aref center 0 0)
-          with cy = (aref center 1 0)
+          with cx = (aref origin 0 0)
+          with cy = (aref origin 1 0)
           do(let ((x (/ (* (aref radius 0) (sqrt (- (expt (aref radius 1) 2) (* y y))))
                         (aref radius 1))))
               (multiple-value-bind (ex1 ey1) (adjust-point x y rotation)
@@ -232,12 +232,12 @@ based on how far the coordinate is along the line"
     ))
   image)
 (defun fill-rectangle(rectangle image stroker)
-  (with-slots (topleft width height rotation) rectangle
+  (with-slots (origin width height rotation) rectangle
     (loop
       repeat height
       for y = height then (1- y)
-      with ty = (aref topleft 1 0)
-      with tx = (aref topleft 0 0)
+      with ty = (aref origin 1 0)
+      with tx = (aref origin 0 0)
       do(multiple-value-bind (e-width1 e-height1)
             (adjust-point width (- y) rotation)
           (multiple-value-bind (e-width2 e-height2)
