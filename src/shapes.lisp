@@ -104,16 +104,13 @@
     ))
 (defmethod get-points((shape rectangle) &key (max-degree 4))
   (declare (ignore max-degree))
-  (with-slots (origin width height rotation)
+  (with-slots (width height)
       shape
-    (map 'list
-         (lambda (x) (add-point origin x))
-         (map 'list (lambda (x y)
-                      (multiple-value-call #'point (adjust-point x y rotation)))
-              (list 0.0 width width 0.0)
-              (list 0.0 0.0 (- height) (- height))
-              )
+    (map 'list #'point
+         (list 0.0 width width 0.0)
+         (list 0.0 0.0 (- height) (- height))
          )
+    )
    ; (multiple-value-bind (e-width e-height)
    ;     (adjust-point width height rotation)
    ;   (list
@@ -123,7 +120,7 @@
    ;    (point (aref topleft 0 0) (- (aref topleft 1 0) e-height))
    ;    )
    ;   )
-    ))
+    )
 
 (defun colinearp(ax ay bx by cx cy dx dy)
   (declare (type (or fixnum single-float);Does this have effect?
