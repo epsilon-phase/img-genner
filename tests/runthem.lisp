@@ -1,2 +1,2 @@
 (in-package img-genner/tests)
-(run-suite *package*)
+;(rove:run-suite *package*)
