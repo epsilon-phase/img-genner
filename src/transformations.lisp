@@ -107,5 +107,8 @@
   (max  (abs (- x1 x2)) (abs (- y2 y1))))
 (defun point-distance(a b)
   (distance2d (aref a 0 0) (aref a 1 0) (aref b 0 0) (aref b 1 0)))
+(defun add-point(a b)
+  (point (+ (aref a 0 0) (aref b 0 0))
+         (+ (aref b 1 0) (aref b 1 0))))
 (defparameter *distance-functions* (list #'chess-distance #'distance2d #'biggest-magnitude))
 (export '(chess-distance biggest-magnitude *distance-functions*))
