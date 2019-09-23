@@ -2,3 +2,9 @@
 build/*
 # no header dependency thingies
 *.d
+# Actually relevant to lisp
+*.fasl
+# png output
+*.png
+# Coverage reports
+report/*

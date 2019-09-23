@@ -73,10 +73,10 @@
 (defmethod bounds((c ellipse))
   (with-slots (origin radius) c
     (list
-     (vector (- (aref origin 0 0) (svref radius 0))
-             (+ (aref origin 1 0) (svref radius 1)))
-     (vector (+ (aref origin 0 0) (svref radius 0))
-             (- (aref origin 1 0) (svref radius 1))))))
+     (vector (- (aref origin 0 0) (aref radius 0))
+             (+ (aref origin 1 0) (aref radius 1)))
+     (vector (+ (aref origin 0 0) (aref radius 0))
+             (- (aref origin 1 0) (aref radius 1))))))
 (defmethod bounds((r rectangle))
   (with-slots (origin width height) r
     (list (vector (aref origin 0 0) (aref origin 1 0))

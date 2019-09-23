@@ -266,12 +266,10 @@ based on how far the coordinate is along the line"
   image)
 (defun fill-rectangle(rectangle image stroker)
   (declare (type Rectangle rectangle))
-  (if (zerop (slot-value rectangle 'rotation))
-      (fill-rectangle-sloppy rectangle image stroker)
-      (destructuring-bind (a b c d) (get-points rectangle)
-        (fill-triangle a b c image stroker)
-        (fill-triangle c d a image stroker)
-        ))
+  (destructuring-bind (a b c d) (get-points rectangle)
+    (fill-triangle a b c image stroker)
+    (fill-triangle c d a image stroker)
+    )
   image)
 (defun fill-rectangle-sloppy(rectangle image stroker)
   (with-slots (origin width height rotation) rectangle
@@ -304,5 +302,5 @@ based on how far the coordinate is along the line"
 (defmethod fill-shape((p t) image stroker)
   (fill-polygon p image stroker))
 
-(export '(fill-shape radial-gradient-stroker gradient-stroker static-clispcolor-stroker
+(export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
           fill-rectangle fill-ellipse fill-rectangle-sloppy fill-triangle))
