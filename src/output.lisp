@@ -12,7 +12,8 @@
             for z = 0 then (1+ z)
             do(setf (aref image (min (1- (array-dimension image 0))
                                      (- (1- (array-dimension image 0)) y))
-                          x z) i)))
+                          x z)
+                    i)))
   )
 
 (defun set-pixel-component(image x y c color)
@@ -26,11 +27,6 @@
       (setf (aref image (min (1- (array-dimension image 0)) (- (1- (array-dimension image 0)) y)) x c) color)
       )
   )
-(defun interpolate(max a b frac)
-  "'naive' linear interpolation"
-  (let ((f (max 0 (min 1 frac))))
-    (+ (* a (- 1 frac))
-       (* b frac))))
 (defun static-color-stroker(color)
   (lambda (i x y frac)
     (declare (ignore frac)
@@ -110,7 +106,8 @@ based on how far the coordinate is along the line"
 (defun stroke-line(ax ay bx by image stroker)
   (declare (type (simple-array (unsigned-byte 8) (* * *)))
            (type function stroker)
-           (type single-float ax ay bx by))
+           (type single-float ax ay bx by)
+           (optimize speed))
   (let ((x1 (truncate ax))
         (y1 (truncate ay))
         (x2 (truncate bx))
@@ -133,6 +130,7 @@ based on how far the coordinate is along the line"
              (err (floor delta-x 2))
              (y-step (if (< y1 y2) 1 -1))
              (y y1))
+        (declare (type fixnum err delta-y y-step delta-x y))
         (loop for x from x1 to x2
               do(progn
                 ;  (format t "~a,~a +~a ~~~a" x y y-step err)
@@ -214,11 +212,17 @@ based on how far the coordinate is along the line"
   image)
 |#
 (defun fill-ellipse(ellipse image stroker)
+  (declare (type ellipse ellipse)
+           (type (simple-array (unsigned-byte 8) (* * *)) image)
+           (type function stroker)
+           (optimize speed))
   (with-slots (origin radius rotation) ellipse
-    (loop for y from (- (svref radius 1)) to (svref radius 1) by 0.5
+    (Declare (type (simple-array single-float (3 1)) origin)
+             (type (simple-array single-float (2)) radius))
+    (loop for y from (- (aref radius 1)) to (aref radius 1) by 0.5
           with cx = (aref origin 0 0)
           with cy = (aref origin 1 0)
-          do(let ((x (/ (* (aref radius 0) (sqrt (- (expt (aref radius 1) 2) (* y y))))
+          do(let ((x (/ (* (aref radius 0) (sqrt (abs (- (expt (aref radius 1) 2) (* y y)))))
                         (aref radius 1))))
               (multiple-value-bind (ex1 ey1) (adjust-point x y rotation)
                 (multiple-value-bind (ex2 ey2) (adjust-point (- 0 x) y rotation)
@@ -237,6 +241,7 @@ based on how far the coordinate is along the line"
            (type function stroker)
            (optimize speed))
   (flet ((edge-function (d e p)
+           (declare (type (simple-array single-float (3 1)) d e p))
            (- (* (- (aref p 0 0) (aref d 0 0))
                  (- (aref e 1 0) (aref d 1 0)))
               (* (- (aref p 1 0) (aref d 1 0))
@@ -249,20 +254,20 @@ based on how far the coordinate is along the line"
             with p = (point 0.0 0.0)
             do(loop for x from min-x to max-x
                     do (setf (aref p 0 0) (+ x 0.5)
-                             (aref p 1 0) (+ y 0.5) p p)
+                             (aref p 1 0) (+ y 0.5))
                     with w0 = 0 with w1 = 0 with w2 = 0
                     do(setf w0 (edge-function b c p)
                             w1 (edge-function c a p)
                             w2 (edge-function a b p))
                     when (and (> w0 0) (> w1 0) (> w2 0))
-                      do(funcall stroker image (truncate x) (truncate y) 0.0)
+                      do(funcall stroker image (truncate x 1) (truncate y 1) 0.0)
             )
             )))
   image)
 (defun fill-rectangle(rectangle image stroker)
   (declare (type Rectangle rectangle))
   (if (zerop (slot-value rectangle 'rotation))
-      (fill-rectangle-sloppy image stroker)
+      (fill-rectangle-sloppy rectangle image stroker)
       (destructuring-bind (a b c d) (get-points rectangle)
         (fill-triangle a b c image stroker)
         (fill-triangle c d a image stroker)
@@ -299,5 +304,5 @@ based on how far the coordinate is along the line"
 (defmethod fill-shape((p t) image stroker)
   (fill-polygon p image stroker))
 
-(export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
-          fill-rectangle fill-ellipse fill-rectangle-sloppy))
+(export '(fill-shape radial-gradient-stroker gradient-stroker static-clispcolor-stroker
+          fill-rectangle fill-ellipse fill-rectangle-sloppy fill-triangle))

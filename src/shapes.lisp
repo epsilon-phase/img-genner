@@ -2,7 +2,7 @@
 
 (defclass shape()
   ((rotation :initform 0.0 :initarg :rotation :type single-float)
-   (origin :initform #2a((0.0)(0.0)(0.0)) :initarg :origin :type (simple-array single-float (3 1)))))
+   (origin :initform (point 0.0 0.0) :initarg :origin :type (simple-array single-float (3 1)))))
 (defgeneric bounds(s))
 (defgeneric move-to(shape x y))
 (defgeneric get-segments(shape &key max-degree))
@@ -19,6 +19,19 @@
               s-theta (sin theta)))
     (values (- (* c-theta x) (* s-theta y))
             (+ (* s-theta x) (* c-theta y)))))
+(defun rotate-around(shape point theta)
+  (declare (type (simple-array single-float (3 1)) point)
+           (type single-float theta))
+  "Rotate a shape around a given point by the angle specified. Destructively modifies shape."
+  (multiple-value-bind (ex ey)
+      (adjust-point (- (aref (slot-value shape 'origin) 0 0)
+                       (aref point 0 0))
+                    (- (aref (slot-value shape 'origin) 1 0)
+                       (aref point 1 0))
+                    theta)
+    (setf (slot-value shape 'origin) (incf-point (point ex ey) point))
+    (incf (slot-value shape 'rotation) theta))
+  shape)
 (defun to-shape-space(point shape)
   (let ((point (sub-point point (slot-value shape 'origin))))
     (multiple-value-call #'point (adjust-point (aref point 0 0)
@@ -26,7 +39,9 @@
                                                (slot-value shape 'rotation))))
   )
 (defclass ellipse(shape)
-   ((radius :initform #(1.0 1.0) :initarg :radius))
+  ((radius :initform #1a(1.0 1.0)
+           :type (simple-array single-float (2))
+           :initarg :radius))
   )
 (defmethod move-to((e shape) x y)
   (setf (aref (slot-value e 'origin) 0 0) (coerce 'single-float x)
@@ -80,26 +95,33 @@
      1.0)))
 (defmethod inside-shape(p (r rectangle))
   (let ((p (to-shape-space p r)))
-    (with-slots (width height)
+    (with-slots (width height) r
         (and
-         (<= 0.0 (aref p 0 0) width)
-         (>= 0.0 (aref p 1 0) height))))
+         (<= (- (/ width 2.0)) (aref p 0 0) (/ width 2.0))
+         (>= (- (/ height 2.0)) (aref p 1 0) (/ height 2.0)))))
   )
 ;;Handle adjusting the points obtained by both the origin(translation) and
 ;;the rotation.
 (defmethod get-points :around ((s shape)&key (max-degree 10))
   (with-slots (origin rotation) s
-    (map 'list (lambda (x) (add-point (multiple-value-call #'point
-                                        (adjust-point (aref x 0 0) (aref x 1 0) rotation))
-                                      origin))
-         (call-next-method s :max-degree max-degree)))
-  )
+    (let ((p (call-next-method s :max-degree max-degree)))
+      (loop for i in p
+            do(multiple-value-bind (ex ey)
+                  (adjust-point (aref i 0 0) (aref i 1 0) rotation)
+                (setf (aref i 0 0) ex
+                      (aref i 1 0) ey)
+                (incf-point i origin)
+                ))
+      p
+      )
+  ))
 (defmethod get-points((shape ellipse) &key (max-degree 10))
   (with-slots (radius rotation) shape
     (loop for i from 0 to max-degree
           for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
-          collect(make-array '(3 1) :initial-contents `((,(* (svref radius 0) (cos angle)))
-                                                        (,(* (svref radius 1) (sin angle)))
+          collect(make-array '(3 1) :element-type 'single-float
+                                    :initial-contents `((,(* (aref radius 0) (cos angle)))
+                                                        (,(* (aref radius 1) (sin angle)))
                                                         (0.0))))
     ))
 (defmethod get-points((shape rectangle) &key (max-degree 4))
@@ -107,8 +129,8 @@
   (with-slots (width height)
       shape
     (map 'list #'point
-         (list 0.0 width width 0.0)
-         (list 0.0 0.0 (- height) (- height))
+         (list (- (/ width 2.0)) (/ width 2.0) (/ width 2.0) (- (/ width 2.0)))
+         (list (/ height 2.0) (/ height 2.0) (- (/ height 2.0)) (- (/ height 2.0)))
          )
     )
    ; (multiple-value-bind (e-width e-height)
@@ -177,5 +199,5 @@ in a closed path"
                  (get-points s))))
 
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
-
-(export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection))
+(Declaim (ftype (function (t t t) (values single-float single-float)) adjust-point))
+(export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection rotate-around))
