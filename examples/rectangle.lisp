@@ -1,7 +1,7 @@
 (in-package img-genner/examples)
 (defun clock-face( hour minute second &optional (size 100) (pathname "clock.png"))
-  (let ((center (make-array '(3 1) :element-type 'single-float
-                                   :initial-contents `((,(/ size 2.0))(,(/ size 2.0))(0.0))))
+  (let ((center (make-array 2 :element-type 'single-float
+                              :initial-contents `(,(/ size 2.0) ,(/ size 2.0))))
         (hour-hand
           (img-genner:make-rectangle (/ size 2.0)
                                      (+ (/ size 2.0) (/ size 8.0))

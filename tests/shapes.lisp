@@ -1,8 +1,8 @@
 (in-package img-genner/tests)
 (use-package :img-genner)
 (defun distance(a)
-  (sqrt (+ (expt (aref a 0 0) 2)
-           (expt (aref a 1 0) 2))))
+  (sqrt (+ (expt (aref a 0) 2)
+           (expt (aref a 1) 2))))
 (deftest circle-stuff
   (testing "radius dimension"
     (loop for i from 3 to 20
@@ -16,19 +16,19 @@
   )
 (deftest rectangle-stuff
   (testing "Rectangle Points"
-    (ok (equalp '(#2a((0.0)(0.0)(0.0))
-                  #2A((1.0)(0.0)(0.0))
-                  #2A((1.0)(-1.0)(0.0))
-                  #2A((0.0)(-1.0)(0.0))
+    (ok (equalp '(#1a(-0.5 0.5)
+                  #1A(0.5 0.5)
+                  #1A(0.5 -0.5)
+                  #1A(-0.5 -0.5)
                   )
                 (get-points (make-rectangle 0.0 0.0 1.0 1.0)))
         "Rectangle correctness")))
 (deftest intersection-stuff
   (testing "Intersection exists"
-    (ok (equalp #2a((0.0)(0.5)(0.0))
+    (ok (equalp #1a(0.0 0.5)
                 (get-intersection 0.0 0.0 0.0 1.0 -0.5 0.5 0.5 0.5))
         "MidLine")
-    (ok (equalp #2a((0.0)(0.0)(0.0))
+    (ok (equalp #1a(0.0 0.0)
                 (get-intersection 0.0 0.0 0.0 1.0
                                   0.0 0.0 1.0 0.0))
         "Line segment end")

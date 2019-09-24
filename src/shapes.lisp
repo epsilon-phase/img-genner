@@ -2,7 +2,7 @@
 
 (defclass shape()
   ((rotation :initform 0.0 :initarg :rotation :type single-float)
-   (origin :initform (point 0.0 0.0) :initarg :origin :type (simple-array single-float (3 1)))))
+   (origin :initform (point 0.0 0.0) :initarg :origin :type (simple-array single-float (2)))))
 (defgeneric bounds(s))
 (defgeneric move-to(shape x y))
 (defgeneric get-segments(shape &key max-degree))
@@ -24,18 +24,18 @@
            (type single-float theta))
   "Rotate a shape around a given point by the angle specified. Destructively modifies shape."
   (multiple-value-bind (ex ey)
-      (adjust-point (- (aref (slot-value shape 'origin) 0 0)
-                       (aref point 0 0))
-                    (- (aref (slot-value shape 'origin) 1 0)
-                       (aref point 1 0))
+      (adjust-point (- (aref (slot-value shape 'origin) 0)
+                       (aref point 0))
+                    (- (aref (slot-value shape 'origin) 1)
+                       (aref point 1))
                     theta)
     (setf (slot-value shape 'origin) (incf-point (point ex ey) point))
     (incf (slot-value shape 'rotation) theta))
   shape)
 (defun to-shape-space(point shape)
   (let ((point (sub-point point (slot-value shape 'origin))))
-    (multiple-value-call #'point (adjust-point (aref point 0 0)
-                                               (aref point 1 0)
+    (multiple-value-call #'point (adjust-point (aref point 0)
+                                               (aref point 1)
                                                (slot-value shape 'rotation))))
   )
 (defclass ellipse(shape)
@@ -44,8 +44,8 @@
            :initarg :radius))
   )
 (defmethod move-to((e shape) x y)
-  (setf (aref (slot-value e 'origin) 0 0) (coerce 'single-float x)
-        (aref (slot-value e 'origin) 1 0) (coerce 'single-float y)))
+  (setf (aref (slot-value e 'origin) 0) (coerce 'single-float x)
+        (aref (slot-value e 'origin) 1) (coerce 'single-float y)))
 (defun make-ellipse(center-x center-y radius-x radius-y)
   "Convenience function for ellipse-creation."
   (let ((a (make-instance 'ellipse)))
@@ -61,8 +61,8 @@
    (width :initform 1.0 :type single-float :initarg :width)
    (height :initform 1.0 :type single-float :initarg :height)))
 (defmethod move-to((r rectangle) x y)
-  (setf (aref (slot-value r 'origin) 0 0) (coerce 'single-float x)
-        (aref (slot-value r 'origin) 1 0) (coerce 'single-float y)))
+  (setf (aref (slot-value r 'origin) 0) (coerce 'single-float x)
+        (aref (slot-value r 'origin) 1) (coerce 'single-float y)))
 (defun make-rectangle(x y width height)
   (let ((a (make-instance 'rectangle)))
     (setf (slot-value a 'origin) (point x y)
@@ -73,32 +73,32 @@
 (defmethod bounds((c ellipse))
   (with-slots (origin radius) c
     (list
-     (vector (- (aref origin 0 0) (aref radius 0))
-             (+ (aref origin 1 0) (aref radius 1)))
-     (vector (+ (aref origin 0 0) (aref radius 0))
-             (- (aref origin 1 0) (aref radius 1))))))
+     (vector (- (aref origin 0) (aref radius 0))
+             (+ (aref origin 1) (aref radius 1)))
+     (vector (+ (aref origin 0) (aref radius 0))
+             (- (aref origin 1) (aref radius 1))))))
 (defmethod bounds((r rectangle))
   (with-slots (origin width height) r
-    (list (vector (aref origin 0 0) (aref origin 1 0))
-          (vector (+ width (aref origin 0 0))
-                  (- height (aref origin 1 0))))
+    (list (vector (aref origin 0 0) (aref origin 1))
+          (vector (+ width (aref origin 0))
+                  (- height (aref origin 1))))
     ))
 (defgeneric inside-shape(point shape))
 (defmethod inside-shape(p (e ellipse))
   (let* ((p2 (to-shape-space p e)))
     (<=
      (+ (/
-         (expt (aref p2 0 0) 2)
+         (expt (aref p2 0) 2)
          (expt (svref (slot-value e 'radius) 0) 2))
-        (/ (expt (aref p2 1 0) 2)
+        (/ (expt (aref p2 1) 2)
            (expt (svref (slot-value e 'radius) 1) 2)))
      1.0)))
 (defmethod inside-shape(p (r rectangle))
   (let ((p (to-shape-space p r)))
     (with-slots (width height) r
         (and
-         (<= (- (/ width 2.0)) (aref p 0 0) (/ width 2.0))
-         (>= (- (/ height 2.0)) (aref p 1 0) (/ height 2.0)))))
+         (<= (- (/ width 2.0)) (aref p 0) (/ width 2.0))
+         (>= (- (/ height 2.0)) (aref p 1) (/ height 2.0)))))
   )
 ;;Handle adjusting the points obtained by both the origin(translation) and
 ;;the rotation.
@@ -107,9 +107,9 @@
     (let ((p (call-next-method s :max-degree max-degree)))
       (loop for i in p
             do(multiple-value-bind (ex ey)
-                  (adjust-point (aref i 0 0) (aref i 1 0) rotation)
-                (setf (aref i 0 0) ex
-                      (aref i 1 0) ey)
+                  (adjust-point (aref i 0) (aref i 1) rotation)
+                (setf (aref i 0) ex
+                      (aref i 1) ey)
                 (incf-point i origin)
                 ))
       p
@@ -119,10 +119,10 @@
   (with-slots (radius rotation) shape
     (loop for i from 0 to max-degree
           for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
-          collect(make-array '(3 1) :element-type 'single-float
-                                    :initial-contents `((,(* (aref radius 0) (cos angle)))
-                                                        (,(* (aref radius 1) (sin angle)))
-                                                        (0.0))))
+          collect(make-array 2 :element-type 'single-float
+                               :initial-contents `(,(* (aref radius 0) (cos angle))
+                                                   ,(* (aref radius 1) (sin angle))
+                                                   )))
     ))
 (defmethod get-points((shape rectangle) &key (max-degree 4))
   (declare (ignore max-degree))
@@ -136,10 +136,10 @@
    ; (multiple-value-bind (e-width e-height)
    ;     (adjust-point width height rotation)
    ;   (list
-   ;    (point (aref topleft 0 0) (aref topleft 1 0))
-   ;    (point (+ (aref topleft 0 0) e-width) (aref topleft 1 0))
-   ;    (point (+ (aref topleft 0 0) e-width) (- (aref topleft 1 0) e-height))
-   ;    (point (aref topleft 0 0) (- (aref topleft 1 0) e-height))
+   ;    (point (aref topleft 0 0) (aref topleft 1))
+   ;    (point (+ (aref topleft 0 0) e-width) (aref topleft 1))
+   ;    (point (+ (aref topleft 0 0) e-width) (- (aref topleft 1) e-height))
+   ;    (point (aref topleft 0 0) (- (aref topleft 1) e-height))
    ;    )
    ;   )
     )

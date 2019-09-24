@@ -70,8 +70,8 @@ based on how far the coordinate is along the line"
 (defun calculate-bounding-box(segments)
   "Calculate the bounding box for the given line segments"
   (loop for (i . _) in segments
-        for x = (aref i 0 0) then (aref i 0 0)
-        for y = (aref i 1 0) then (aref i 1 0)
+        for x = (aref i 0) then (aref i 0)
+        for y = (aref i 1) then (aref i 1)
         maximizing x into max-x
         minimizing y into min-y
         maximizing y into max-y
@@ -83,12 +83,12 @@ based on how far the coordinate is along the line"
 
 (defun stroke-h-line(image stroker start end)
   (declare (optimize (speed 3))
-           (type (simple-array single-float (3 1)) start end)
+           (type (simple-array single-float (2)) start end)
            (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type function stroker))
-  (let ((sx (the fixnum (truncate (aref start 0 0))))
-        (ex (the fixnum (truncate (aref end 0 0))))
-        (y  (the fixnum (truncate (aref start 1 0)))))
+  (let ((sx (the fixnum (truncate (aref start 0))))
+        (ex (the fixnum (truncate (aref end 0))))
+        (y  (the fixnum (truncate (aref start 1)))))
 ;    (format t "stroking color from ~a to ~a \n" sx ex)
     (loop for i from sx to ex
           do (funcall stroker image i y 0.0)
@@ -164,10 +164,10 @@ based on how far the coordinate is along the line"
                                        (map 'list
                                             (lambda (x)
                                               (get-intersection startx y endx y
-                                                                (aref (car x) 0 0)
-                                                                (aref (car x) 1 0)
-                                                                (aref (cdr x) 0 0)
-                                                                (aref (cdr x) 1 0)))
+                                                                (aref (car x) 0)
+                                                                (aref (car x) 1)
+                                                                (aref (cdr x) 0)
+                                                                (aref (cdr x) 1)))
                                             lines))
                         #'compare-points)))))
   image)
@@ -175,8 +175,8 @@ based on how far the coordinate is along the line"
   (with-slots (radius center) ellipse
     (if (zerop (slot-value ellipse 'rotation))
      (loop for y from 0 to (aref radius 1)
-          with cx = (truncate (aref center 0 0))
-          with cy = (truncate (aref center 1 0))
+          with cx = (truncate (aref center 0))
+          with cy = (truncate (aref center 1))
           with ry = (truncate (expt (aref radius 1) 2))
           with rx = (truncate (expt (aref radius 0) 2))
           do(loop for x from 0 to (sqrt (* rx (- 1 (/ (* y y) ry))))
@@ -188,8 +188,8 @@ based on how far the coordinate is along the line"
                   )
            )
        (loop for y from (* -1 (aref radius 1)) to (aref radius 1)
-           with cx = (truncate (aref center 0 0))
-           with cy = (truncate (aref center 1 0))
+           with cx = (truncate (aref center 0))
+           with cy = (truncate (aref center 1))
            with rx = (truncate (expt (aref radius 0) 2))
            with ry = (truncate (expt (aref radius 1) 2))
            do(loop for x from (* -1 (sqrt (* rx (- 1 (/ (* y y)
@@ -217,11 +217,11 @@ based on how far the coordinate is along the line"
            (type function stroker)
            (optimize speed))
   (with-slots (origin radius rotation) ellipse
-    (Declare (type (simple-array single-float (3 1)) origin)
+    (Declare (type (simple-array single-float (2)) origin)
              (type (simple-array single-float (2)) radius))
     (loop for y from (- (aref radius 1)) to (aref radius 1) by 0.5
-          with cx = (aref origin 0 0)
-          with cy = (aref origin 1 0)
+          with cx = (aref origin 0)
+          with cy = (aref origin 1)
           do(let ((x (/ (* (aref radius 0) (sqrt (abs (- (expt (aref radius 1) 2) (* y y)))))
                         (aref radius 1))))
               (multiple-value-bind (ex1 ey1) (adjust-point x y rotation)
@@ -236,25 +236,25 @@ based on how far the coordinate is along the line"
     ))
   image)
 (defun fill-triangle(a b c image stroker)
-  (declare (type (simple-array single-float (3 1)) a b c)
+  (declare (type (simple-array single-float (2)) a b c)
            (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type function stroker)
            (optimize speed))
   (flet ((edge-function (d e p)
-           (declare (type (simple-array single-float (3 1)) d e p))
-           (- (* (- (aref p 0 0) (aref d 0 0))
-                 (- (aref e 1 0) (aref d 1 0)))
-              (* (- (aref p 1 0) (aref d 1 0))
-                 (- (aref e 0 0) (aref d 0 0))))))
-    (let* ((min-x (min (aref a 0 0) (aref b 0 0) (aref c 0 0)))
-           (max-x (max (aref a 0 0) (aref b 0 0) (aref c 0 0)))
-           (min-y (min (aref a 1 0) (aref b 1 0) (aref c 1 0)))
-           (max-y (max (aref a 1 0) (aref b 1 0) (aref c 1 0))))
+           (declare (type (simple-array single-float (2)) d e p))
+           (- (* (- (aref p 0) (aref d 0))
+                 (- (aref e 1) (aref d 1)))
+              (* (- (aref p 1) (aref d 1))
+                 (- (aref e 0) (aref d 0))))))
+    (let* ((min-x (min (aref a 0) (aref b 0) (aref c 0)))
+           (max-x (max (aref a 0) (aref b 0) (aref c 0)))
+           (min-y (min (aref a 1) (aref b 1) (aref c 1)))
+           (max-y (max (aref a 1) (aref b 1) (aref c 1))))
       (loop for y from min-y to max-y
             with p = (point 0.0 0.0)
             do(loop for x from min-x to max-x
-                    do (setf (aref p 0 0) (+ x 0.5)
-                             (aref p 1 0) (+ y 0.5))
+                    do (setf (aref p 0) (+ x 0.5)
+                             (aref p 1) (+ y 0.5))
                     with w0 = 0 with w1 = 0 with w2 = 0
                     do(setf w0 (edge-function b c p)
                             w1 (edge-function c a p)
@@ -276,8 +276,8 @@ based on how far the coordinate is along the line"
     (loop
       repeat height
       for y = height then (1- y)
-      with ty = (aref origin 1 0)
-      with tx = (aref origin 0 0)
+      with ty = (aref origin 1)
+      with tx = (aref origin 0)
       do(multiple-value-bind (e-width1 e-height1)
             (adjust-point width (- y) rotation)
           (multiple-value-bind (e-width2 e-height2)
