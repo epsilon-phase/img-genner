@@ -1,12 +1,18 @@
-(in-package "img-genner")
+(in-package img-genner)
 
 (defclass shape()
-  ((rotation :initform 0.0 :initarg :rotation :type single-float)
-   (origin :initform (point 0.0 0.0) :initarg :origin :type (simple-array single-float (2)))))
+  ((rotation :initform 0.0 :initarg :rotation
+             :type single-float
+             :documentation "The amount by which the shape is rotated around the origin")
+   (origin :initform (point 0.0 0.0) :initarg :origin :type (simple-array single-float (2))
+           :documentation "The point which all vertices are relative to."))
+  (:documentation "The base shape class"))
 (defgeneric bounds(s))
-(defgeneric move-to(shape x y))
+(defgeneric move-to(shape x y)
+  (:documentation "Set the origin of the shape to the specified coordinates."))
 (defgeneric get-segments(shape &key max-degree))
-(defgeneric get-points(shape &key max-degree))
+(defgeneric get-points(shape &key max-degree)
+  (:documentation "Get the points comprising the outline of the shape"))
 (let ((theta-last 0.0)
       (s-theta 0.0)
       (c-theta 1.0))
@@ -33,6 +39,7 @@
     (incf (slot-value shape 'rotation) theta))
   shape)
 (defun to-shape-space(point shape)
+  "Convert global coordinates to local coordinates."
   (let ((point (sub-point point (slot-value shape 'origin))))
     (multiple-value-call #'point (adjust-point (aref point 0)
                                                (aref point 1)
@@ -41,7 +48,9 @@
 (defclass ellipse(shape)
   ((radius :initform #1a(1.0 1.0)
            :type (simple-array single-float (2))
-           :initarg :radius))
+           :initarg :radius
+           :documentation "A 2 dimensional array of floats that specifies the x and y axis respectively"))
+  (:documentation "An ellipse with the given radii")
   )
 (defmethod move-to((e shape) x y)
   (setf (aref (slot-value e 'origin) 0) (coerce 'single-float x)
@@ -58,8 +67,11 @@
   )
 (defclass rectangle(shape)
   (
-   (width :initform 1.0 :type single-float :initarg :width)
-   (height :initform 1.0 :type single-float :initarg :height)))
+   (width :initform 1.0 :type single-float :initarg :width
+          :documentation "The width of the rectangle")
+   (height :initform 1.0 :type single-float :initarg :height
+           :documentation "The height of the rectangle"))
+  (:documentation "A rectangle"))
 (defmethod move-to((r rectangle) x y)
   (setf (aref (slot-value r 'origin) 0) (coerce 'single-float x)
         (aref (slot-value r 'origin) 1) (coerce 'single-float y)))
@@ -103,6 +115,7 @@
 ;;Handle adjusting the points obtained by both the origin(translation) and
 ;;the rotation.
 (defmethod get-points :around ((s shape)&key (max-degree 10))
+  "Calculate the points offset by rotation and origin"
   (with-slots (origin rotation) s
     (let ((p (call-next-method s :max-degree max-degree)))
       (loop for i in p
@@ -116,6 +129,7 @@
       )
   ))
 (defmethod get-points((shape ellipse) &key (max-degree 10))
+  "Create a list of max-degree points which comprise an ellipse."
   (with-slots (radius rotation) shape
     (loop for i from 0 to max-degree
           for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
@@ -125,6 +139,7 @@
                                                    )))
     ))
 (defmethod get-points((shape rectangle) &key (max-degree 4))
+  "Create a list of 4 points which comprise a rectangle."
   (declare (ignore max-degree))
   (with-slots (width height)
       shape

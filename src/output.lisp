@@ -1,5 +1,5 @@
 (require :png)
-(in-package "img-genner")
+(in-package img-genner)
 ;TODO add assertions for color type checking.
 (defun set-pixel(image x y color)
   "Bounds respecting color setting"

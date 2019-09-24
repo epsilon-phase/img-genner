@@ -1,4 +1,4 @@
-(in-package "img-genner")
+(in-package img-genner)
 
 (defmacro with-array-items(items array &body body)
   (let ((g (gensym)))

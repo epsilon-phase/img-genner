@@ -1,5 +1,5 @@
-(defpackage "img-genner"
+(defpackage img-genner
   (:use common-lisp)
   (:nicknames :img-genner)
-  (:export :interpolate))
+  (:documentation "docstring"))
 

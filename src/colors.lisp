@@ -1,4 +1,4 @@
-(in-package "img-genner")
+(in-package img-genner)
 (defvar *color-names* (make-hash-table :size 147 :test 'equalp))
 (defun def-color(name r g b)
   (setf (gethash name *color-names*)

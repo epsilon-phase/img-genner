@@ -1,4 +1,4 @@
-(in-package "img-genner")
+(in-package img-genner)
 
 ; From https://rosettacode.org/wiki/Matrix_multiplication#Common_Lisp
 (defun mmul (A B)
