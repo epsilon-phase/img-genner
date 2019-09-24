@@ -68,8 +68,6 @@
                                          :if-exists :supersede
                                          :if-does-not-exist :create)
       (png:encode image f))))
-(defun point(x y)
-  (make-array '(3 1) :element-type 'single-float :initial-contents `((,x)(,y)(0.0))))
 (defun ellipse-rotation()
   (let* ((ellipses (map 'list
                        (lambda(x)

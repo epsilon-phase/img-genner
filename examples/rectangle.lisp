@@ -6,9 +6,9 @@
           (img-genner:make-rectangle (/ size 2.0)
                                      (+ (/ size 2.0) (/ size 8.0))
                                      10.0
-                                     (/ size 4)))
+                                     (/ size 4.0)))
         (minute-hand (img-genner:make-rectangle (/ size 2.0)
-                                                (+ (/ size 2)(/ size 4.0))
+                                                (+ (/ size 2.0)(/ size 4.0))
                                                 5.0
                                                 (/ size 2.0)))
         (second-hand (img-genner:make-rectangle (/ size 2.0)
@@ -19,6 +19,14 @@
         (minute (- minute))
         (hour (- hour))
         (second (- second)))
+    (loop for i from 0 to 59
+          with shape = (make-instance 'img-genner:rectangle :width 5.0 :height 10.0
+                                                            :origin (img-genner:point (/ size 2.0)
+                                                                                      (- size 5.0)))
+          do(img-genner:fill-rectangle shape image
+                                       (img-genner:static-color-stroker
+                                        (if (zerop (mod i 5)) #(255 255 255) #(200 200 200))))
+          do(img-genner:rotate-around shape (img-genner:point (/ size 2.0) (/ size 2.0)) 0.104))
     (img-genner:rotate-around hour-hand
                               center (+ (* hour 2 (/ 3.14 12))
                                         (* minute 2 (/ 3.14 12 60))))
