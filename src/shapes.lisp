@@ -10,7 +10,8 @@
 (defgeneric bounds(s))
 (defgeneric move-to(shape x y)
   (:documentation "Set the origin of the shape to the specified coordinates."))
-(defgeneric get-segments(shape &key max-degree))
+(defgeneric get-segments(shape &key max-degree)
+  (:documentation "Retrieve the line segment point pairs that comprise the outline of the shape"))
 (defgeneric get-points(shape &key max-degree)
   (:documentation "Get the points comprising the outline of the shape"))
 (let ((theta-last 0.0)
@@ -19,6 +20,7 @@
   (defun adjust-point(x y theta)
     (declare (type single-float theta)
              (type (or single-float fixnum) x y))
+    "Rotate the point @c((x,y)) @c(theta) radians around the origin, returning it as @c((values x y))"
     (when (/= theta theta-last)
         (setf theta-last theta
               c-theta (cos theta)
@@ -40,6 +42,7 @@
   shape)
 (defun to-shape-space(point shape)
   "Convert global coordinates to local coordinates."
+  (declare (type (simple-array single-float (2)) point))
   (let ((point (sub-point point (slot-value shape 'origin))))
     (multiple-value-call #'point (adjust-point (aref point 0)
                                                (aref point 1)
@@ -49,7 +52,7 @@
   ((radius :initform #1a(1.0 1.0)
            :type (simple-array single-float (2))
            :initarg :radius
-           :documentation "A 2 dimensional array of floats that specifies the x and y axis respectively"))
+           :documentation "A array of 2 floats that specifies the x and y axis radius respectively"))
   (:documentation "An ellipse with the given radii")
   )
 (defmethod move-to((e shape) x y)

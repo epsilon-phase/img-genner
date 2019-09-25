@@ -3,5 +3,5 @@
  :documents((:title "Img-genner"
              :authors ("Violet White")
              :output-format (:type :multi-html
-                             :template :minima)
+                             :template :gamma)
              :sources ("manual.scr"))))

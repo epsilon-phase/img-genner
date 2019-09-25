@@ -75,6 +75,13 @@
   )
 
 (defun point(x y)
+  "Make a new point structure, coercing x and y into single floats.
+
+Equivalent to
+@code(
+(make-array 2 :element-type 'single-float
+              :initial-contents `(,(coerce x 'single-float)
+                                  ,(coerce y 'single-float))))"
   (make-array 2 :element-type 'single-float :initial-contents `(,(coerce x 'single-float) ,(coerce y 'single-float))))
 
 (defmethod transform((tr transformation) (m array))
@@ -109,20 +116,24 @@
   (distance2d (aref a 0) (aref a 1) (aref b 0) (aref b 1)))
 (defun incf-point(place delta)
   (declare (type (simple-array single-float (2)) place delta))
+  "Destructively modify place so that it is the elementwise sum of place and delta"
   (setf (aref place 0) (+ (aref place 0)(aref delta 0)))
   (setf (aref place 1) (+ (aref place 1) (aref delta 1)))
   place)
 (defun decf-point(place delta)
   (declare (type (simple-array single-float (2)) place delta))
+  "Destructively modify place so that it is the element-wise subtrahend of place and delta"
   (decf (aref place 0) (aref delta 0))
   (decf (aref place 1) (aref delta 1))
   )
 (defun add-point(a b)
   (declare (type (simple-array single-float (2)) a b))
+  "Make a new point that is the sum of a and b"
   (point (+ (aref a 0) (aref b 0))
          (+ (aref a 1) (aref b 1))))
 (defun sub-point(a b)
   (Declare (type (simple-array single-float (2)) a b))
+  "Make a new point that is the subtrahend of a and b"
   (point (- (aref a 0) (aref b 0))
          (- (aref a 1) (aref b 1))))
 (declaim (ftype (function (single-float single-float) (simple-array single-float (2)))

@@ -16,16 +16,19 @@
                           (ldb (byte 8 16) c)))
               )))
 (defun get-color(name &optional (get-alpha nil))
+  "Retrieve a color by name from the color table, optionally with an alpha channel"
   (if get-alpha
       (copy-vector-extend (gethash (string-downcase name) *color-names* #(0 0 0)) 255)
       (gethash (string-downcase name) *color-names* #(0 0 0)))
   )
 (defun get-color-list()
+
   (loop for i being the hash-keys of *color-names*
         collect i))
 (defun make-color-rgb(r g b)
-  (apply #'vector (map 'list (lambda(x) (coerce x '(unsigned-byte 8)))
-                       `(,r ,g ,b))))
+  "Create a vector suitable for usage in the rasterization functions."
+  (map 'vector (lambda(x) (coerce x '(unsigned-byte 8)))
+                       `(,r ,g ,b)))
 (defun get-random-color()
   (loop repeat (random (hash-table-count *color-names*))
         for i being the hash-keys of *color-names*
