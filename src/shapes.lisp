@@ -134,13 +134,13 @@
 (defmethod get-points((shape ellipse) &key (max-degree 10))
   "Create a list of max-degree points which comprise an ellipse."
   (with-slots (radius rotation) shape
-    (loop for i from 0 to max-degree
-          for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
-          collect(make-array 2 :element-type 'single-float
-                               :initial-contents `(,(* (aref radius 0) (cos angle))
-                                                   ,(* (aref radius 1) (sin angle))
-                                                   )))
-    ))
+     (loop for i from max-degree downto 0 ;Looping in this direction to ensure clockwise order
+           for angle = 0.0 then (* i (/ (* 3.1415 2) max-degree))
+           collect(make-array 2 :element-type 'single-float
+                                :initial-contents `(,(* (aref radius 0) (cos angle))
+                                                    ,(* (aref radius 1) (sin angle))
+                                                    ))))
+    )
 (defmethod get-points((shape rectangle) &key (max-degree 4))
   "Create a list of 4 points which comprise a rectangle."
   (declare (ignore max-degree))
