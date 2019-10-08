@@ -4,4 +4,5 @@
 
 (defpackage img-genner/triangularization
   (:use common-lisp)
-  (:documentation "Triangulation utilities."))
+  (:documentation "Triangulation utilities.")
+  (:export earclip))
