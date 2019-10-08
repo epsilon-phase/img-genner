@@ -253,8 +253,8 @@ based on how far the coordinate is along the line"
       (loop for y from min-y to max-y
             with p = (point 0.0 0.0)
             do(loop for x from min-x to max-x
-                    do (setf (aref p 0) (+ x 0.5)
-                             (aref p 1) (+ y 0.5))
+                    do (setf (aref p 0) (+ x 0.25)
+                             (aref p 1) (+ y 0.25))
                     with w0 = 0 with w1 = 0 with w2 = 0
                     do(setf w0 (edge-function b c p)
                             w1 (edge-function c a p)
