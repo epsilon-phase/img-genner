@@ -8,6 +8,7 @@
      ,@body)))
   )
 (defun copy-vector-extend(vec item)
+  "Make a copy of a vector, increasing its size if necessary and adding a new item"
   (let ((v (make-array (1+ (array-dimension vec 0))
                        :element-type (array-element-type vec)
                        :fill-pointer 0
