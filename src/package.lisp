@@ -5,4 +5,4 @@
 (defpackage img-genner/triangularization
   (:use common-lisp)
   (:documentation "Triangulation utilities.")
-  (:export earclip))
+  (:export earclip complex-polygon-p fan-triangulate))

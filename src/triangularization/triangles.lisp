@@ -13,10 +13,13 @@
                    (aref b 0) (aref b 1)
                    (aref c 0) (aref c 1)) 0))
 (defun triangle-sum (x1 y1 x2 y2 x3 y3)
+  (declare (type single-float x1 y1 x2 y2 x3 y3))
   (+ (* x1 (- y3 y2))
      (* x2 (- y1 y3))
      (* x3 (- y2 y1))))
 (defun triangle-area(x1 y1 x2 y2 x3 y3)
+  "Calculate the area of the triangle"
+  (declare (type single-float x1 y1 x2 y2 x3 y3))
   (abs (/ (+
            (* x1 (- y2 y3))
            (* x2 (- y3 y1))
@@ -53,10 +56,13 @@
 (defun complex-polygon-p(polygon)
   "Test if the polygon requires a more extensive algorithm"
   (flet ((dx (a b)
+           (declare (type (simple-array single-float (2)) a b))
            (- (aref b 0) (aref a 0)))
          (dy (a b)
+           (declare (type (simple-array single-float (2)) a b))
            (- (aref b 1) (aref a 1)))
          (zcross (dx1 dy1 dx2 dy2)
+           (declare (type single-float dx1 dx2 dy1 dy2))
            (- (* dx1 dy2) (- dy1 dx2))))
     (let ((p (copy-list polygon)))
       (setf (cdr (last p)) p)
@@ -107,11 +113,6 @@
               do (setf polygon (delete ear polygon :test #'equal))
               do(push (list prev ear next) triangles)
               do(decf point-count)
-              do(progn
-                  (fresh-line)
-                  (format t "polygon=~a ears=~a" polygon ear-vertices)
-                  (terpri)
-                  (format t "triangles=~a" triangles))
               when (> point-count 3);Find ears that might be new :3
                 do(let* ((prev-prev-index (mod (- ear-index 2) point-count))
                          (next-next-index (mod (+ ear-index 1) point-count))

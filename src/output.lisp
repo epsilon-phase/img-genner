@@ -299,8 +299,10 @@ based on how far the coordinate is along the line"
   )
 (defmethod fill-shape((e ellipse) image stroker)
   (fill-ellipse e image stroker))
+(defmethod fill-shape ((p polygon) image stroker)
+  (loop for (a b c) in (img-genner/triangularization:earclip (get-points p))
+        do(fill-triangle a b c image stroker)))
 (defmethod fill-shape((p t) image stroker)
   (fill-polygon p image stroker))
-
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
           fill-rectangle fill-ellipse fill-rectangle-sloppy fill-triangle))

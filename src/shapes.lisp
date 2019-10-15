@@ -28,7 +28,7 @@
     (values (- (* c-theta x) (* s-theta y))
             (+ (* s-theta x) (* c-theta y)))))
 (defun rotate-around(shape point theta)
-  (declare (type (simple-array single-float (3 1)) point)
+  (declare (type (simple-array single-float (2)) point)
            (type single-float theta))
   "Rotate a shape around a given point by the angle specified. Destructively modifies shape."
   (multiple-value-bind (ex ey)
@@ -75,6 +75,16 @@
    (height :initform 1.0 :type single-float :initarg :height
            :documentation "The height of the rectangle"))
   (:documentation "A rectangle"))
+(defclass polygon(shape)
+  ((points :initform nil :type 'list
+           :documentation "The points that make up the polygon"))
+  (:documentation "A polygon with no guarantees"))
+(defclass convex-polygon(polygon)()
+  (:documentation "A convex polygon that can have special handling"))
+(defmethod (setf points) :after (point (p polygon))
+  (when (>= (list-length (slot-value p 'points)) 3)
+    (change-class p (if (img-genner/triangularization:complex-polygon-p (slot-value p 'points))
+                        'polygon 'convex-polygon))))
 (defmethod move-to((r rectangle) x y)
   (setf (aref (slot-value r 'origin) 0) (coerce 'single-float x)
         (aref (slot-value r 'origin) 1) (coerce 'single-float y)))
@@ -150,18 +160,11 @@
          (list (- (/ width 2.0)) (/ width 2.0) (/ width 2.0) (- (/ width 2.0)))
          (list (/ height 2.0) (/ height 2.0) (- (/ height 2.0)) (- (/ height 2.0)))
          )
-    )
-   ; (multiple-value-bind (e-width e-height)
-   ;     (adjust-point width height rotation)
-   ;   (list
-   ;    (point (aref topleft 0 0) (aref topleft 1))
-   ;    (point (+ (aref topleft 0 0) e-width) (aref topleft 1))
-   ;    (point (+ (aref topleft 0 0) e-width) (- (aref topleft 1) e-height))
-   ;    (point (aref topleft 0 0) (- (aref topleft 1) e-height))
-   ;    )
-   ;   )
-    )
-
+    ))
+(defmethod get-points((shape polygon) &key (max-degree 3))
+  "Get the points that comprise the exterior of the polygon"
+  (declare (ignore max-degree))
+  (slot-value shape 'points))
 (defun colinearp(ax ay bx by cx cy dx dy)
   (declare (type (or fixnum single-float);Does this have effect?
                  ax ay
