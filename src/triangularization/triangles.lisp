@@ -26,6 +26,7 @@
            (* x3 (- y1 y2)))
           2.0)))
 (defun point-insidep(p a b c)
+  (declare (type (simple-array single-float (2)) p a b c))
   (flet ((triangle-area (a b c)
            (triangle-area
             (aref a 0) (aref a 1)
