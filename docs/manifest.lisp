@@ -4,4 +4,5 @@
              :authors ("Violet White")
              :output-format (:type :multi-html
                              :template :gamma)
-             :sources ("manual.scr"))))
+             :sources ("overview.scr"
+                       "manual.scr"))))

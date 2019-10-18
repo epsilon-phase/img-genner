@@ -1,12 +1,7 @@
 @begin(section)
-@title(Overview)
-This library fucks.
-@b(Hell yeah)
-@end(section)
-@begin(section)
 @title(Package docs)
 @begin(section)
-@title(Overview)
+@title(Introduction)
 
 @c(Img-genner) is a package for very basic drawing in common lisp. It does not
 support vectors, beziers, or any other such (useful) contrivances as of yet, and
@@ -55,19 +50,19 @@ There are a few departures from standard conventions that are probably worthwhil
       @end(section)
   @end(section)
   @begin(section)
-    @title(Triangularization)
-    @cl:with-package[name="img-genner/triangularization"](
-      @cl:doc(function earclip))
-@begin[lang="lisp"](code)
-CL-USER>(img-genner/triangularization:earclip
-          (map 'list #'img-genner:point '(0.0 200.0 200.0 100.0 0.0)
-                                        '(0.0 0.0 175.0 200.0 200.0)))
-=>((#(0.0 200.0) #(100.0 200.0) #(200.0 0.0))
-   (#(100.0 200.0) #(200.0 175.0) #(200.0 0.0))
-   (#(200.0 0.0) #(0.0 0.0) #(0.0 200.0)))
+      @title(Triangularization)
+      @cl:with-package[name="img-genner/triangularization"](
+        @cl:doc(function earclip))
+  @begin[lang="lisp"](code)
+  CL-USER>(img-genner/triangularization:earclip
+            (map 'list #'img-genner:point '(0.0 200.0 200.0 100.0 0.0)
+                                          '(0.0 0.0 175.0 200.0 200.0)))
+  =>((#(0.0 200.0) #(100.0 200.0) #(200.0 0.0))
+     (#(100.0 200.0) #(200.0 175.0) #(200.0 0.0))
+     (#(200.0 0.0) #(0.0 0.0) #(0.0 200.0)))
+  @end(code)
    @cl:with-package[name="img-genner/triangularization"](
     @cl:doc(function fan-triangulate)
    )
-@end(code)
-@end(section)
+  @end(section)
 @end(section)

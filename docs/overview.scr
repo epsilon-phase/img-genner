@@ -1,0 +1,7 @@
+@begin(section)
+@title(Overview)
+  This library is intended to provide a relatively simple means of drawing things to
+  static image files. It does not yet provide a hard/fast guarantee of correctness or speed
+  but in general we have done as much work as we can to make it fast and correct on those
+  (at the moment) few examples that we have written and tested.
+@end(section)
