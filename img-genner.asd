@@ -10,4 +10,5 @@
                (:file "src/interpolation")
                (:file "src/shapes")
                (:file "src/output")
+               (:file "src/glitch")
                ))

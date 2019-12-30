@@ -28,7 +28,7 @@
     (values (- (* c-theta x) (* s-theta y))
             (+ (* s-theta x) (* c-theta y)))))
 (defun rotate-around(shape point theta)
-  (declare (type (simple-array single-float (3 1)) point)
+  (declare (type (simple-array single-float (2)) point)
            (type single-float theta))
   "Rotate a shape around a given point by the angle specified. Destructively modifies shape."
   (multiple-value-bind (ex ey)
@@ -49,7 +49,7 @@
                                                (slot-value shape 'rotation))))
   )
 (defclass ellipse(shape)
-  ((radius :initform #1a(1.0 1.0)
+  ((radius :initform (make-array 2 :element-type 'single-float :initial-contents '(1.0 1.0))
            :type (simple-array single-float (2))
            :initarg :radius
            :documentation "A array of 2 floats that specifies the x and y axis radius respectively"))

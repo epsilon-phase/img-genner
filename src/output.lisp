@@ -3,7 +3,10 @@
 ;TODO add assertions for color type checking.
 (defun set-pixel(image x y color)
   "Bounds respecting color setting"
-  (declare (type fixnum x y))
+  (declare (type fixnum x y)
+ ;          (type (vector (unsigned-byte *) *) color)
+           (type (simple-array unsigned-byte (* * *)))
+           )
   (if (and
        (< 0 x (array-dimension image 1))
        (< 0 y (array-dimension image 0))
@@ -15,6 +18,21 @@
                           x z)
                     i)))
   )
+(defun get-pixel(image x y)
+  (declare (type fixnum x y))
+  (let ((color (make-array (array-dimension image 2) :element-type '(unsigned-byte 8)))
+        (x (min (1- (array-dimension image 1)) (max x 0)))
+        (y (min (1- (array-dimension image 0))
+                (- (1- (array-dimension image 0)) y))))
+    (loop for i from 0 below (array-dimension image 2)
+          do(setf (aref color i) (aref image y x i))
+            finally (return color)
+          )
+  ))
+(defun swap-pixel(image x1 y1 x2 y2)
+  (let ((c (get-pixel image x1 y1)))
+    (set-pixel image x1 y1 (get-pixel image x2 y2))
+    (set-pixel image x2 y2 c)))
 
 (defun set-pixel-component(image x y c color)
   "Bounds respecting color setting, but more convenient for gradients"
