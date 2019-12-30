@@ -1,15 +1,10 @@
 @begin(section)
-@title(Overview)
-This library fucks.
-@b(Hell yeah)
-@end(section)
-@begin(section)
 @title(Package docs)
 @begin(section)
-@title(Overview)
+@title(Introduction)
 
 @c(Img-genner) is a package for very basic drawing in common lisp. It does not
-support vectors, baziers, or any other such (useful) contrivances as of yet, and
+support vectors, beziers, or any other such (useful) contrivances as of yet, and
 as of now, only allows for @c(png) output.
 
 There are a few departures from standard conventions that are probably worthwhile to note:
@@ -53,5 +48,21 @@ There are a few departures from standard conventions that are probably worthwhil
               @cl:doc(function rotate-around)
         )
       @end(section)
+  @end(section)
+  @begin(section)
+      @title(Triangularization)
+      @cl:with-package[name="img-genner/triangularization"](
+        @cl:doc(function earclip))
+  @begin[lang="lisp"](code)
+  CL-USER>(img-genner/triangularization:earclip
+            (map 'list #'img-genner:point '(0.0 200.0 200.0 100.0 0.0)
+                                          '(0.0 0.0 175.0 200.0 200.0)))
+  =>((#(0.0 200.0) #(100.0 200.0) #(200.0 0.0))
+     (#(100.0 200.0) #(200.0 175.0) #(200.0 0.0))
+     (#(200.0 0.0) #(0.0 0.0) #(0.0 200.0)))
+  @end(code)
+   @cl:with-package[name="img-genner/triangularization"](
+    @cl:doc(function fan-triangulate)
+   )
   @end(section)
 @end(section)

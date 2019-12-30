@@ -189,46 +189,6 @@ based on how far the coordinate is along the line"
                                             lines))
                         #'compare-points)))))
   image)
-#|(defun fill-ellipse(ellipse image stroker)
-  (with-slots (radius center) ellipse
-    (if (zerop (slot-value ellipse 'rotation))
-     (loop for y from 0 to (aref radius 1)
-          with cx = (truncate (aref center 0))
-          with cy = (truncate (aref center 1))
-          with ry = (truncate (expt (aref radius 1) 2))
-          with rx = (truncate (expt (aref radius 0) 2))
-          do(loop for x from 0 to (sqrt (* rx (- 1 (/ (* y y) ry))))
-                  do(progn
-                        (funcall stroker image (+ cx x) (+ cy y) 0.0)
-                        (funcall stroker image (- cx x) (+ cy y) 0.0)
-                        (funcall stroker image (- cx x) (- cy y) 0.0)
-                        (funcall stroker image (+ cx x) (- cy y) 0.0))
-                  )
-           )
-       (loop for y from (* -1 (aref radius 1)) to (aref radius 1)
-           with cx = (truncate (aref center 0))
-           with cy = (truncate (aref center 1))
-           with rx = (truncate (expt (aref radius 0) 2))
-           with ry = (truncate (expt (aref radius 1) 2))
-           do(loop for x from (* -1 (sqrt (* rx (- 1 (/ (* y y)
-                                                        ry)) )))
-                                 to (sqrt (* rx (- 1 (/ (* y y) ry))))
-                   do(progn
-                       (multiple-value-bind (ex ey)
-                           (adjust-point x y (slot-value ellipse 'rotation))
-                         (funcall stroker image (+ cx (truncate ex))
-                                  (+ cy (truncate ey)) 0.0))
-                       (multiple-value-bind (ex ey) (adjust-point (- x) y
-                                                                  (slot-value ellipse 'rotation))
-                         (funcall stroker image (+ cx (truncate ex))
-                                  (+ cy (truncate ey)) 0.0
-                                  )
-                         )
-                       (multiple-value-bind (ex ey) (adjust-point (- x) (- y) (slot-value ellipse 'rotation))
-                         (funcall stroker image (+ cx (truncate ex)) (+ cy (truncate ey)) 0.0))
-                       )))))
-  image)
-|#
 (defun fill-ellipse(ellipse image stroker)
   (declare (type ellipse ellipse)
            (type (simple-array (unsigned-byte 8) (* * *)) image)
@@ -271,8 +231,8 @@ based on how far the coordinate is along the line"
       (loop for y from min-y to max-y
             with p = (point 0.0 0.0)
             do(loop for x from min-x to max-x
-                    do (setf (aref p 0) (+ x 0.5)
-                             (aref p 1) (+ y 0.5))
+                    do (setf (aref p 0) (+ x 0.25)
+                             (aref p 1) (+ y 0.25))
                     with w0 = 0 with w1 = 0 with w2 = 0
                     do(setf w0 (edge-function b c p)
                             w1 (edge-function c a p)
@@ -317,8 +277,10 @@ based on how far the coordinate is along the line"
   )
 (defmethod fill-shape((e ellipse) image stroker)
   (fill-ellipse e image stroker))
+(defmethod fill-shape ((p polygon) image stroker)
+  (loop for (a b c) in (img-genner/triangularization:earclip (get-points p))
+        do(fill-triangle a b c image stroker)))
 (defmethod fill-shape((p t) image stroker)
   (fill-polygon p image stroker))
-
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
           fill-rectangle fill-ellipse fill-rectangle-sloppy fill-triangle))

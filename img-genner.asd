@@ -4,6 +4,7 @@
   :licence "Nonviolent Public License"
   :depends-on ("png")
   :components ((:file "src/package")
+               (:file "src/triangularization/triangles")
                (:file "src/utilities")
                (:file "src/transformations")
                (:file "src/colors")
