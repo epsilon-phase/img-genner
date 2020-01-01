@@ -1,0 +1,5 @@
+digraph G{
+  Shape -> {ellipse, rectangle,Polygon};
+  Polygon -> convexpolygon;
+  convexpolygon [label="convex-polygon"];
+}

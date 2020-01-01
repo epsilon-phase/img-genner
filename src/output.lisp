@@ -8,8 +8,8 @@
            (type (simple-array unsigned-byte (* * *)))
            )
   (if (and
-       (< 0 x (array-dimension image 1))
-       (< 0 y (array-dimension image 0))
+       (< -1 x (array-dimension image 1))
+       (< -1 y (array-dimension image 0))
        (= (array-dimension color 0) (array-dimension image 2)))
       (loop for i across color
             for z = 0 then (1+ z)
@@ -33,6 +33,7 @@
   (let ((c (get-pixel image x1 y1)))
     (set-pixel image x1 y1 (get-pixel image x2 y2))
     (set-pixel image x2 y2 c)))
+
 
 (defun set-pixel-component(image x y c color)
   "Bounds respecting color setting, but more convenient for gradients"

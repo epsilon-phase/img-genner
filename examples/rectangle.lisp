@@ -36,8 +36,8 @@
     (img-genner:rotate-around second-hand center
                                  (* second 2 (/ 3.14 60)))
     (img-genner:fill-rectangle hour-hand image (img-genner:static-color-stroker #(0 0 255)))
-    (img-genner:fill-rectangle minute-hand image (img-genner:static-color-stroker #(255 0 0)))
-    (img-genner:fill-rectangle second-hand image (img-genner:static-color-stroker #(255 255 0)))
+    (img-genner:fill-shape minute-hand image (img-genner:static-color-stroker #(255 0 0)))
+    (img-genner:fill-shape second-hand image (img-genner:static-color-stroker #(255 255 0)))
     (png:encode-file image pathname)
     )
   )

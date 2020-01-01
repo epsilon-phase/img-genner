@@ -52,7 +52,7 @@
   ((radius :initform (make-array 2 :element-type 'single-float :initial-contents '(1.0 1.0))
            :type (simple-array single-float (2))
            :initarg :radius
-           :documentation "A array of 2 floats that specifies the x and y axis radius respectively"))
+           :documentation "An array of 2 floats that specifies the x and y axis radius respectively"))
   (:documentation "An ellipse with the given radii")
   )
 (defmethod move-to((e shape) x y)
