@@ -32,19 +32,22 @@
                                 (- x2 x1))
                              ))))))
 
-(defun line-index-interpolator(x1 y1 x2 y2)
+(defun line-index-interpolator(x1 y1 x2 y2 &optional (buffer nil))
   (declare (optimize (speed 3))
            (type fixnum x1 y1 x2 y2)
            )
+  (if buffer
+      (setf (fill-pointer buffer) 0))
   (flet ((absdist (a b) (declare (type fixnum a))(abs (- a b))))
     (let* ((dx (absdist x2 x1))
            (dy (- (absdist y2 y1)))
            (sx (if (< x1 x2) 1 -1))
            (sy (if (< y1 y2) 1 -1))
            (err (+ dx dy))
-           (r (make-array dx
-                             :adjustable t :fill-pointer 0
-                             :initial-element nil)))
+           (r (if buffer buffer
+                  (make-array dx
+                              :adjustable t :fill-pointer 0
+                              :initial-element nil))))
       (declare (type fixnum err dy dx ))
       (loop until (and (= x1 x2) (= y1 y2))
             for e2 fixnum = (* 2 err) then (* 2 err)

@@ -1,6 +1,16 @@
 (require :png)
 (in-package img-genner)
-;TODO add assertions for color type checking.
+                                        ;TODO add assertions for color type checking.
+(declaim (sb-ext:maybe-inline correct-indices swap-pixel get-pixel))
+(defun correct-indices(width height x y)
+  (declare
+           (type fixnum height width x y)
+           (optimize speed))
+  (values
+   (min (1- width) (max x 0))
+   (min (1- height)
+        (- (1- height) y)))
+  )
 (defun set-pixel(image x y color)
   "Bounds respecting color setting"
   (declare (type fixnum x y)
@@ -18,11 +28,11 @@
                           x z)
                     i)))
   )
-(defun get-pixel(image x y)
+(defun get-pixel(image x y &optional (result-vec nil))
   (declare (type fixnum x y)
            (type (simple-array (unsigned-byte 8) (* * 3)) image)
            (optimize (speed 3)))
-  (let ((color (make-array (array-dimension image 2) :element-type '(unsigned-byte 8)))
+  (let ((color (if result-vec result-vec (make-array (array-dimension image 2) :element-type '(unsigned-byte 8))))
         (x (min (1- (array-dimension image 1)) (max x 0)))
         (y (min (1- (array-dimension image 0))
                 (- (1- (array-dimension image 0)) y))))
@@ -32,11 +42,19 @@
             finally (return color)
           )
     ))
-(declaim (ftype (function ((simple-array #1=(unsigned-byte 8) (* * 3)) fixnum fixnum) (values (simple-array #1# (3)))) get-pixel))
+(declaim (ftype (function ((simple-array #1=(unsigned-byte 8) (* * 3)) fixnum fixnum &optional t) (values (simple-array #1# (3)))) get-pixel))
 (defun swap-pixel(image x1 y1 x2 y2)
-  (let ((c (get-pixel image x1 y1)))
-    (set-pixel image x1 y1 (get-pixel image x2 y2))
-    (set-pixel image x2 y2 c)))
+  (declare (type (simple-array (unsigned-byte 8) (* * *)) image)
+           (type fixnum x1 y1 x2 y2)
+           (optimize speed)
+           (inline correct-indices))
+  (multiple-value-bind (x1 y1) (correct-indices (array-dimension image 1) (array-dimension image 0) x1 y1)
+    (multiple-value-bind (x2 y2) (correct-indices (array-dimension image 1) (array-dimension image 0) x2 y2)
+      (loop for i from 0 below 3
+            do(psetf (aref image y1 x1 i) (aref image y2 x2 i)
+                     (aref image y2 x2 i) (aref image y1 x1 i)))
+      )
+    ))
 
 
 (defun set-pixel-component(image x y c color)
