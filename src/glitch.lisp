@@ -130,5 +130,49 @@ using the comparison function passed"
                         ))
         )
   )
+(defun swap-tiles(image tile-width tile-height x1 y1 x2 y2)
+  "Swap a segment of an image consisting of tile-width by tile-height pixels, the first starting at x1,y1 and the second starting at x2,y2"
+  (declare (type (simple-array (unsigned-byte 8) (* * 3)) image)
+           (type fixnum tile-width tile-height x1 y1 x2 y2)
+           (optimize speed)
+           (inline swap-pixel))
+  (dotimes (y tile-height)
+    (dotimes (x tile-width)
+      (declare (type fixnum x y))
+      (swap-pixel image (the fixnum (+ x1 x))
+                  (the fixnum (+ y1 y))
+                  (the fixnum (+ x2 x))
+                  (the fixnum (+ y2 y))))))
+(defun range-vector(start end)
+  (loop with r = (make-array (- end start) :element-type 'fixnum :fill-pointer 0)
+        for i from start below end do(vector-push i r)
+        finally (return r)))
+(defun scramble-vector(r)
+  "Take a vector r and scramble it using the \"random\" function. Destructively modifies r"
+  ;Fisher Yates/Knuth Shuffle implementation
+  (loop for i from (1- (array-dimension r 0)) above 1
+        for j = (random i) then (random i)
+        do(psetf (aref r i) (aref r j)
+                 (aref r j) (aref r i))
+        finally (return r)
+        ))
+(defun scramble-image(image tile-width tile-height)
+  "Swap tiles of (tile-width x tile-height) in the image."
+  (declare (type (simple-array (unsigned-byte 8) (* * 3)) image)
+           (type fixnum tile-width tile-height))
+  (let* ((columns (floor (/ (array-dimension image 1) tile-width)))
+        (rows (floor (/ (array-dimension image 0) tile-height)))
+        (tile-vec (scramble-vector (range-vector 0 (* columns rows)))))
+    (flet ((tile-x (index)
+             (* tile-width (mod index columns)))
+           (tile-y (index)
+             (* tile-height (floor (/ index columns)))))
+      (loop for i = 0 then (1+ i)
+            for j across tile-vec
+            do(swap-tiles image tile-width tile-height
+                          (tile-x i) (tile-y i)
+                          (tile-x j) (tile-y j))
+            ))))
+
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
-          central-pixel-sort fuck-it-up-pixel-sort))
+          central-pixel-sort fuck-it-up-pixel-sort scramble-image))
