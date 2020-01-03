@@ -62,4 +62,5 @@
             )
       ))
   )
+(declaim (sb-ext:maybe-inline line-index-interpolator))
 (export '(poly-linear-interpolator line-index-interpolator))
