@@ -8,7 +8,7 @@
   (declare (type (vector (unsigned-byte 8) 3) c1 c2))
   (loop for a across c1
         for b across c2
-        until (not (= a b))
+          until (not (= a b))
         finally (return (< a b))))
 (defun compare-colors-magnitude(c1 c2)
   (declare (type (simple-array (unsigned-byte 8)) c1 c2)
@@ -166,20 +166,23 @@ using the comparison function passed"
 (defun scramble-image(image tile-width tile-height)
   "Swap tiles of (tile-width x tile-height) in the image."
   (declare (type (simple-array (unsigned-byte 8) (* * 3)) image)
-           (type fixnum tile-width tile-height))
-  (let* ((columns (floor (/ (array-dimension image 1) tile-width)))
-        (rows (floor (/ (array-dimension image 0) tile-height)))
+           (type fixnum tile-width tile-height)
+           (optimize speed))
+  (let* ((columns (floor  (array-dimension image 1) tile-width))
+        (rows (floor  (array-dimension image 0) tile-height))
         (tile-vec (scramble-vector (range-vector 0 (* columns rows)))))
+    (declare (type fixnum columns rows))
     (flet ((tile-x (index)
              (* tile-width (mod index columns)))
            (tile-y (index)
-             (* tile-height (floor (/ index columns)))))
+             (declare (optimize speed)
+                      (type fixnum index))
+             (* tile-height (floor index columns))))
       (loop for i = 0 then (1+ i)
             for j across tile-vec
             do(swap-tiles image tile-width tile-height
                           (tile-x i) (tile-y i)
-                          (tile-x j) (tile-y j))
-            ))))
+                          (tile-x j) (tile-y j))))))
 
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
           central-pixel-sort fuck-it-up-pixel-sort scramble-image))

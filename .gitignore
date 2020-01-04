@@ -8,3 +8,4 @@ build/*
 *.png
 # Coverage reports
 report/*
+.#*

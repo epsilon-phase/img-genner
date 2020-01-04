@@ -2,7 +2,7 @@
   :version "0.0.1"
   :author "Violet White"
   :licence "Nonviolent Public License"
-  :depends-on ("png")
+  :depends-on ("png" "cl-jpeg")
   :components ((:file "src/package")
                (:file "src/triangularization/triangles")
                (:file "src/utilities")

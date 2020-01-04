@@ -293,10 +293,7 @@ based on how far the coordinate is along the line"
 
 (defgeneric fill-shape(shape image stroker))
 (defmethod fill-shape((r rectangle) image stroker)
-;;  (if (zerop (slot-value r 'rotation))
       (fill-rectangle r image stroker)
- ;;     (fill-polygon (get-segments r) image stroker)
- ;;     )
   )
 (defmethod fill-shape((e ellipse) image stroker)
   (fill-ellipse e image stroker))
@@ -307,3 +304,58 @@ based on how far the coordinate is along the line"
   (fill-polygon p image stroker))
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
           fill-rectangle fill-ellipse fill-rectangle-sloppy fill-triangle))
+
+                                        ;Actual image saving/loading stuff here :)
+
+(defun load-image(pathname)
+  "Load an image, detecting the type from the filename"
+  (let  ((ext (subseq pathname (1+ (position #\. pathname :from-end t)) )))
+    (cond
+      ((string= ext "png") (png:8-bit-image (png:decode-file pathname)))
+      ((or (string= ext "jpg")
+           (string= ext "jpeg")) (multiple-value-bind (image height width)
+                               (jpeg:decode-image pathname :colorspace-conversion t)
+                                   (loop with im = (make-array (list height width
+                                                                     (/ (array-dimension image 0)
+                                                                        (* height width)))
+                                                         :element-type '(unsigned-byte 8))
+                                   for c across image
+                                   for i = 0 then (1+ i)
+                                   do(setf (row-major-aref im i)
+                                           c)
+                                   finally (return ;For some reason, cl-jpeg loads it in bgr order
+                                             (loop for y from 0 below height
+                                                   do(loop for x from 0 below width
+                                                           do(psetf (aref im y x 0)
+                                                                    (aref im y x 2)
+                                                                    (aref im y x 2)
+                                                                    (aref im y x 0)))
+                                                   finally (return im)))))))))
+(defun save-image(image filename &key (quality 64))
+  "Save an image to the given filename, selecting png or jpeg compression based on the extension. The quality number is Mysterious, and only applies to the jpeg encoder."
+  (let ((ext (subseq filename (1+ (position #\. filename :from-end t)))))
+    (cond
+      ((string= ext "png") (png:encode-file image filename))
+      ((string= ext "jpg")
+                                        ;CL-JPEG seems unable to enable us to produce
+                                        ;images with reasonable loss, but, eh.
+                                        ;Worth including.
+       (loop with im = (jpeg:allocate-buffer (array-dimension image 0)
+                                             (array-dimension image 1)
+                                             3)
+             for i from 0 below (array-total-size im)
+             do(setf (aref im i)
+                     (row-major-aref image
+                                     (case (mod i 3)
+                                       (0 (+ 2 i))
+                                       (2 (- i 2))
+                                       (1 i)))
+                     )
+             finally (jpeg:encode-image filename im 3 (array-dimension image 0)
+                                        (array-dimension image 1)
+                                         :q-factor quality)
+             )
+       )
+    )
+  ))
+(export '(save-image load-image))
