@@ -1,7 +1,7 @@
 (require :png)
 (in-package img-genner)
                                         ;TODO add assertions for color type checking.
-(declaim (sb-ext:maybe-inline correct-indices swap-pixel get-pixel))
+(declaim (sb-ext:maybe-inline correct-indices swap-pixel swap-pixel-2 get-pixel))
 (defun correct-indices(width height x y)
   (declare
            (type fixnum height width x y)
@@ -55,7 +55,55 @@
                      (aref image y2 x2 i) (aref image y1 x1 i)))
       )
     ))
+(defun swap-pixel-2(image1 x1 y1 image2 x2 y2)
+  (declare (type (simple-array (unsigned-byte 8) (* * *)) image1 image2)
+           (type fixnum x1 y1 x2 y2)
+           (optimize speed)
+           (inline correct-indices))
+  (multiple-value-bind (x1 y1) (correct-indices (array-dimension image1 1) (array-dimension image1 0) x1 y1)
+    (multiple-value-bind (x2 y2) (correct-indices (array-dimension image2 1) (array-dimension image2 0) x2 y2)
+      (loop for i from 0 below 3
+            do(psetf (aref image2 y2 x2 i) (aref image1 y1 x1 i)
+                     (aref image1 y1 x1 i) (aref image1 y2 x2 i))))))
+(defun copy-region(source dest width height x1 y1
+                   x2 y2)
+  (loop for y from 0 below height
+        do(loop for x from 0 below width
+                do(loop for c from 0 below 3
+                        do(setf (aref dest (+ y2 y) (+ x2 x) c)
+                                (aref source (+ y1 y) (+ x1 x) c)))))
+  )
+(defun partition-image(image mode element)
+  "Partition an image into two different parts.
+Mode must be either :row or :column, and determines the axis of the split
+Element being the row or column where it starts copying to the second image"
+  (let* ((dim-x-1 (ecase mode
+                    (:row (array-dimension image 1))
+                    (:column (min element (array-dimension image 1)))))
+         (dim-x-2 (ecase mode
+                    (:row (array-dimension image 1))
+                    (:column (- (array-dimension image 1) element))))
 
+         (dim-y-1 (ecase mode
+                    (:row element)
+                    (:column (array-dimension image 0))))
+         (dim-y-2 (ecase mode
+                    (:row (- (array-dimension image 0) element))
+                    (:column (array-dimension image 0))))
+         (im1 (make-array (list dim-y-1 dim-x-1 (array-dimension image 2))
+                          :element-type '(unsigned-byte 8)))
+         (im2 (make-array (list dim-y-2 dim-x-2 (array-dimension image 2))
+                          :element-type '(unsigned-byte 8)))
+         )
+    (copy-region image im1 dim-x-1 dim-y-1 0 0 0 0)
+    (copy-region image im2 dim-x-2 dim-y-2
+                 (if (eq mode :column) dim-x-1 0)
+                 (if (eq mode :row) dim-y-1 0) 0 0
+                 )
+    (values im1 im2)
+    )
+
+  )
 
 (defun set-pixel-component(image x y c color)
   "Bounds respecting color setting, but more convenient for gradients"
@@ -357,5 +405,5 @@ based on how far the coordinate is along the line"
              )
        )
     )
-  ))
+    ))
 (export '(save-image load-image))

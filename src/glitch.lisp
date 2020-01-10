@@ -150,6 +150,15 @@ using the comparison function passed"
                   (the fixnum (+ y1 y))
                   (the fixnum (+ x2 x))
                   (the fixnum (+ y2 y))))))
+(defun swap-tiles-2(tile-width tile-height image1 x1 y1 image2 x2 y2)
+  (declare (type fixnum tile-width tile-height x1 y1 x2 y2)
+           (type (simple-array (unsigned-byte 8) (* * 3)) image1 image2))
+  (dotimes (y tile-height)
+    (dotimes (x tile-width)
+      (declare (type fixnum x y))
+      (swap-pixel-2 image1 (+ x x1) (+ y y1)
+                    image2 (+ x x2) (+ y y2))))
+  )
 (defun range-vector(start end)
   (loop with r = (make-array (- end start) :element-type 'fixnum :fill-pointer 0)
         for i from start below end do(vector-push i r)
@@ -157,7 +166,7 @@ using the comparison function passed"
 (defun scramble-vector(r)
   "Take a vector r and scramble it using the \"random\" function. Destructively modifies r"
   ;Fisher Yates/Knuth Shuffle implementation
-  (loop for i from (1- (array-dimension r 0)) above 1
+  (loop for i from (1- (fill-pointer r)) above 1
         for j = (random i) then (random i)
         do(psetf (aref r i) (aref r j)
                  (aref r j) (aref r i))
@@ -183,6 +192,39 @@ using the comparison function passed"
             do(swap-tiles image tile-width tile-height
                           (tile-x i) (tile-y i)
                           (tile-x j) (tile-y j))))))
+(defun scramble-image-2(tile-width tile-height image1 image2)
+  "Scramble two images into each other with a specified tile size
+It is an error to specify images that are of different dimensions"
+  (declare (type fixnum tile-width tile-height)
+           (type (simple-array (unsigned-byte 8) (* * 3)) image1 image2))
+  (when (not (and (= (array-dimension image1 0) (array-dimension image2 0))
+                  (= (array-dimension image1 1) (array-dimension image1 1))))
+      (error "Image1 and image2 have differing sizes. This is not supported"))
+  (let* ((columns (floor  (array-dimension image1 1) tile-width))
+         (rows (floor  (array-dimension image1 0) tile-height))
+         (tile-vec (scramble-vector
+                    (loop with r = (make-array 1 :adjustable t :fill-pointer 0 :element-type 'list)
+                          for i across (range-vector 0 (* columns rows))
+                          do(progn (vector-push-extend (list image1 i) r)
+                                   (vector-push-extend (list image2 i) r))
+                          finally (return r)))))
+    (flet ((tile-x (index)
+             (* tile-width (mod index columns)))
+           (tile-y (index)
+             (declare (optimize speed)
+                      (type fixnum index))
+             (* tile-height (floor index columns))))
+      (print (aref tile-vec 0))
+      (loop for idx from 1 below (length tile-vec)
+            for j = (aref tile-vec (1- idx)) then (aref tile-vec (1- idx))
+            for i = (aref tile-vec idx) then (aref tile-vec idx)
 
+            do(destructuring-bind (im1 tile1) i
+                (destructuring-bind (im2 tile2) j
+                (swap-tiles-2 tile-width tile-height
+                            im1 (tile-x tile1) (tile-y tile1)
+                            im2 (tile-x tile2) (tile-y tile2)))))
+    )
+  ))
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
-          central-pixel-sort fuck-it-up-pixel-sort scramble-image))
+          central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2))

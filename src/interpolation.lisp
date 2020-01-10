@@ -35,6 +35,7 @@
 (defun line-index-interpolator(x1 y1 x2 y2 &optional (buffer nil))
   (declare (optimize (speed 3))
            (type fixnum x1 y1 x2 y2)
+           (type (or null (vector cons)) buffer)
            )
   (if buffer
       (setf (fill-pointer buffer) 0))
