@@ -226,13 +226,15 @@ It is an error to specify images that are of different dimensions"
                             im2 (tile-x tile2) (tile-y tile2)))))
     )
     ))
-(defun intensify-blur(image offset )
+(defun intensify-blur(image offset)
   "Performs a simple linear blur from left to right on the specified interval"
   (declare (optimize (speed 2))
            (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type fixnum offset))
   (loop for y fixnum from 0 below (array-dimension image 0)
-        do(loop for x fixnum from offset below (- (array-dimension image 1) offset)
+        with start-x = (whenz (< offset 0) (abs offset))
+        with end-x = (- (array-dimension image 1)(whenz (> offset 0) offset))
+        do(loop for x fixnum from start-x below end-x
                 for x-off fixnum = (+ x offset)
                 do(loop for c fixnum from 0 below (array-dimension image 2)
                         do(setf (aref image y x c)
@@ -244,5 +246,28 @@ It is an error to specify images that are of different dimensions"
           finally (return image)
         )
   )
+
+(defun intensify-blur-nd(im offset)
+  "Performs a simple linear blur from left to right on the specified interval. Non-destructive, different than intensify-blur"
+  (declare (optimize (speed 2))
+           (type (simple-array (unsigned-byte 8) (* * *)) im)
+           (type fixnum offset))
+  (loop with image = (the (simple-array (unsigned-byte 8) (* * *)) (copy-image im))
+        for y fixnum from 0 below (array-dimension im 0)
+        with start-x = (whenz (< offset 0) (abs offset))
+        with end-x = (+ (array-dimension image 1)(whenz (< offset 0) offset))
+        do(loop for x fixnum from start-x below end-x
+                for x-off fixnum = (+ x offset)
+                do(loop for c fixnum from 0 below (array-dimension image 2)
+                        do(setf (aref image y x c)
+                                (floor (+ (aref im y x c)
+                                          (aref im y x-off c))
+                                       2))
+                        )
+                )
+        finally (return image)
+        )
+  )
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
-          central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2 intensify-blur))
+          central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2 intensify-blur
+          intensify-blur-nd))

@@ -33,5 +33,13 @@
                         do(setf (aref new y x c)
                                 (aref image y x c))))
         finally (return new)))
-(declaim (ftype (function ((simple-array t (* * *))) (simple-array t (* * *))) copy-image))
-(print (macroexpand '(with-array-items ((a 1 2)(b 2 3)) c (setf a 2 b 5))))
+(defmacro whenz(test &body body)
+  "Returns body when test is not nil"
+  (if (> 1 (length body))
+      `(if ,test (progn ,@body) 0)
+      `(if ,test ,@body 0)))
+(defmacro unlessz(test &body body)
+  "Returns zero unless test returns nil"
+  (if (> 1 (length body))
+      `(if ,test 0 (progn ,@body))
+      `(if ,test 0 ,@body)))
