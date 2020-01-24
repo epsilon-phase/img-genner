@@ -50,12 +50,12 @@ Perfect, we have a nice little image.
 Let's draw a line.
 
 ```lisp
-(img-genner:stroke-line 0 0 30 30 *image* 
+(img-genner:stroke-line *image* 0 0 30 30
                         (img-genner:static-color-stroker #(255 255 255)))
 ```
 
 The `static-color-stroker` is the most basic 'stroker' option, it returns a
-closure that sets each pixel it is called on according to the position and
+closure that sets each pixel it is called on the image, position and
 fraction of the line stroked(for other drawing routines such as filling shapes
 it is not used). The static color stroker does not use the fraction input, but
 the `gradient-color-stroker` does.
@@ -64,3 +64,5 @@ The other stroker that is available is the `radial-gradient-stroker`, which
 takes two colors to interpolate, a center position, and a radius over which it
 fades from the first to the second, and an optional distance function, in case
 you want, for instance, some Manhattan distance instead.
+
+You can implement your own so long as the function is of the signature `(image x y fraction)`
