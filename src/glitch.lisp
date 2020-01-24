@@ -268,6 +268,8 @@ It is an error to specify images that are of different dimensions"
         finally (return image)
         )
   )
+
+
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
           central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2 intensify-blur
           intensify-blur-nd))
