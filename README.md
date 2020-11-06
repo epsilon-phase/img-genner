@@ -66,3 +66,19 @@ fades from the first to the second, and an optional distance function, in case
 you want, for instance, some Manhattan distance instead.
 
 You can implement your own so long as the function is of the signature `(image x y fraction)`
+
+
+# Lessons Learned
+
+There are many deficiencies here. Namely how utterly unergonomic it is. Early on
+the decisions that we made were in favor of performance. Now that the library is
+older, and we have been working on it for longer, and we've had a break, the
+usage of vectors everywhere is more trouble than it's worth, the lack of
+convenience is really hard to deal with.
+
+The shapes part of the library is completely orthagonal with the rest of the
+library, the glitch routines have no connection to them, indeed *cannot* have
+any connection with them.
+
+Had we made the opposite choice in that stead, it would be a much nicer, more
+powerful library for the sort of usages we envision now.

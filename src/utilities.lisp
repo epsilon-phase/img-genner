@@ -33,7 +33,16 @@
                         do(setf (aref new y x c)
                                 (aref image y x c))))
         finally (return new)))
-(defmacro whenz(test &body body)
+
+(defmacro whenv(test value &body body)
+  (if (> 1 (length body))
+      `(if ,test (progn ,@body) ,value)
+      `(if ,test ,@body ,value)))
+(defmacro unlessv(test value body)
+  (if (> 1 (length body))
+      `(if ,test ,value (progn ,@body))
+      `(if ,test ,value ,@body)))
+(defmacro whenz(test  &body body)
   "Returns body when test is not nil"
   (if (> 1 (length body))
       `(if ,test (progn ,@body) 0)
@@ -43,3 +52,5 @@
   (if (> 1 (length body))
       `(if ,test 0 (progn ,@body))
       `(if ,test 0 ,@body)))
+
+

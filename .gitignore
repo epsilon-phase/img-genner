@@ -4,8 +4,10 @@ build/*
 *.d
 # Actually relevant to lisp
 *.fasl
-# png output
+# image output
 *.png
+*.jpg
+*.jpeg
 # Coverage reports
 report/*
 .#*
