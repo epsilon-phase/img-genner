@@ -92,6 +92,73 @@ using the comparison function passed"
                   do(sort-along-line image l comparison))
           )
     ))
+(defun color-diff(c1 c2)
+  (declare (type (array (unsigned-byte 8) (3)) c1 c2)
+           (optimize speed))
+   (loop for a across c1
+         for b across c2
+         summing (expt (- a b) 2)))
+(defun copy-tile(dest dx dy src sx sy tw th)
+  (declare (type (array (unsigned-byte 8) (* * 3)) dest src)
+           (type fixnum dx dy sx sy tw th)
+           (optimize speed))
+  (loop for y fixnum from 0 below th
+        with pix = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0)
+        do(loop for x fixnum from 0 below tw
+                do(set-pixel dest (+ dx x) (+ dy y) (get-pixel src (+ sx x) (+ sy y) pix)))))
+(defun compare-tiles(dest dx dy src sx sy width height &key (distance #'color-diff))
+  (declare (type (array (unsigned-byte 8) (* * 3)) dest src)
+           (type function distance)
+           (type fixnum dx dy sx sy width height)
+           (optimize speed))
+  (loop for x from 0 below width
+        for dpx = (+ x dx)
+        for spx = (+ x sx)
+        with total = 0.0
+        with pix-a = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0)
+        with pix-b = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0)
+        do(loop for y from 0 below height
+                for dpy = (min (1- (array-dimension dest 0)) (+ y dy))
+                for spy = (min (1- (array-dimension src 0)) (+ y sy))
+                for spix = (get-pixel src spx spy pix-a)
+                for dpix = (get-pixel dest dpx dpy pix-b)
+                do(incf total (funcall distance spix dpix))
+                )
+        finally (return (sqrt total)))
+  )
+(defun tile-coordinates(tile-width tile-height image-width image-height)
+  (loop for y from 0 below (* tile-height (floor image-height tile-height)) by tile-height
+        until (>= (+ y tile-height) image-height);cut off partial tiles :3
+        appending (loop for x from 0 below (* tile-width (floor image-width tile-width)) by tile-width
+                        until(>= (+ x tile-width) image-width)
+                        collecting (cons x y))
+        )
+  )
+(defun  most-similar-tiles(i1 x1 y1  i2 width height tile-width tile-height)
+  "Find the most similar tiles by a given metric. i1 is the image with the tile and i2 is the image you want to find the best tile from.
+Width and height are for i2, hence their place in the order."
+  (declare (optimize speed))
+  (loop for coord in (tile-coordinates tile-width tile-height width height)
+        for x = (car coord) then (car coord)
+        for y = (cdr coord) then (cdr coord)
+        with best = '(0 . 0)
+        with best-cost = (compare-tiles i1 x1 y1 i2 0 0 tile-width tile-height)
+        when (and coord (> best-cost (compare-tiles i1 x1 y1 i2 x y tile-width tile-height)))
+          do(setf best coord
+                  best-cost (compare-tiles i1 x1 y1 i2 x y tile-width tile-height))
+        finally (return best))
+  )
+(defun mosaify(src dest tile-width tile-height)
+  (let ((result (make-image (array-dimension src 1) (array-dimension src 0))))
+    (loop for i in (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0))
+          for x = (car i) then (car i)
+          for y = (cdr i) then (cdr i)
+          for best = (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height )
+          do(copy-tile result x y src (car best) (cdr best) tile-width tile-height)
+          do(print i)
+          )
+    result
+  ))
 (defun central-pixel-sort (image cx cy
                            &key
                             (comparison #'compare-colors-bytewise)
@@ -293,7 +360,7 @@ It is an error to specify images that are of different dimensions"
                 (case mx
                   (r (+ (/ (- g b) d)
                         (if (< g b) 6 0)))
-                  (b (+ 2 (/ (- b r) d)))
+                  (g (+ 2 (/ (- b r) d)))
                   (b (+ 4 (/ (- r g) d)))))
           ))
     (vector h s l)))
