@@ -154,7 +154,7 @@ Width and height are for i2, hence their place in the order."
           for x = (car i) then (car i)
           for y = (cdr i) then (cdr i)
           for best = (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height )
-          do(copy-tile result x y src (car best) (cdr best) tile-width tile-height)
+          do(copy-tile result x y dest (car best) (cdr best) tile-width tile-height)
           do(print i)
           )
     result
