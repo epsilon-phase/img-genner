@@ -93,11 +93,39 @@ using the comparison function passed"
           )
     ))
 (defun color-diff(c1 c2)
-  (declare (type (array (unsigned-byte 8) (3)) c1 c2)
+  (declare (type (simple-array (unsigned-byte 8) (3)) c1 c2)
            (optimize speed))
-   (loop for a across c1
-         for b across c2
-         summing (expt (- a b) 2)))
+  (let ((r1 (aref c1 0))
+        (r2 (aref c2 0))
+        (g1 (aref c1 1))
+        (g2 (aref c2 1))
+        (b1 (aref c1 2))
+        (b2 (aref c2 2)))
+    (+ (expt (- r1 r2) 2.0)
+       (expt (- g1 g2) 2.0)
+       (expt (- b1 b2) 2.0))))
+(defun color-brightness(c1 c2)
+  (declare (type (simple-array (unsigned-byte 8) (3)) c1 c2)
+           (optimize speed))
+  (loop for i from 0 below 3
+        for a = (coerce (aref c1 i) 'single-float)
+        for b = (coerce (aref c2 i) 'single-float)
+        summing a into c
+        summing b into d
+        finally (return (expt (/ (- c d) 3.0) 2.0))))
+(defun color-hue(c1 c2)
+  (declare (type (simple-array (unsigned-byte 8) (3)) c1 c2)
+           (optimize speed))
+  (let ((r1 (aref c1 0))
+        (r2 (aref c2 0))
+        (g1 (aref c1 1))
+        (g2 (aref c2 1))
+        (b1 (aref c1 2))
+        (b2 (aref c2 2)))
+    (let ((h1 (rgb-to-hsl r1 g1 b1))
+          (h2 (rgb-to-hsl r2 g2 b2)))
+      (expt (- (aref h1 0) (aref h2 0)) 2.0)
+    )))
 (defun copy-tile(dest dx dy src sx sy tw th)
   (declare (type (array (unsigned-byte 8) (* * 3)) dest src)
            (type fixnum dx dy sx sy tw th)
@@ -106,25 +134,29 @@ using the comparison function passed"
         with pix = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0)
         do(loop for x fixnum from 0 below tw
                 do(set-pixel dest (+ dx x) (+ dy y) (get-pixel src (+ sx x) (+ sy y) pix)))))
-(defun compare-tiles(dest dx dy src sx sy width height &key (distance #'color-diff))
+(defun compare-tiles(dest dx dy src sx sy width height &key (distance #'color-diff) (threshold 1e15))
   (declare (type (array (unsigned-byte 8) (* * 3)) dest src)
            (type function distance)
            (type fixnum dx dy sx sy width height)
-           (optimize speed))
+           (type single-float threshold)
+           (optimize speed (safety 0)))
   (loop for x from 0 below width
         for dpx = (+ x dx)
         for spx = (+ x sx)
+        with threshold = (* threshold threshold)
         with total = 0.0
-        with pix-a = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0)
-        with pix-b = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0)
+        with pix-a = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0 :adjustable nil)
+        with pix-b = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0 :adjustable nil)
         do(loop for y from 0 below height
                 for dpy = (min (1- (array-dimension dest 0)) (+ y dy))
                 for spy = (min (1- (array-dimension src 0)) (+ y sy))
                 for spix = (get-pixel src spx spy pix-a)
                 for dpix = (get-pixel dest dpx dpy pix-b)
-                do(incf total (funcall distance spix dpix))
+                do(incf (the single-float total) (color-diff spix dpix))
+                until(> total threshold); TODO Threshold seems kinda~~ broken. Also it doesn't contribute much to improving speed
                 )
-        finally (return (sqrt total)))
+        until (> total threshold)
+        finally (return (the single-float (sqrt total))))
   )
 (defun tile-coordinates(tile-width tile-height image-width image-height)
   (loop for y from 0 below (* tile-height (floor image-height tile-height)) by tile-height
@@ -143,20 +175,45 @@ Width and height are for i2, hence their place in the order."
         for y = (cdr coord) then (cdr coord)
         with best = '(0 . 0)
         with best-cost = (compare-tiles i1 x1 y1 i2 0 0 tile-width tile-height)
-        when (and coord (> best-cost (compare-tiles i1 x1 y1 i2 x y tile-width tile-height)))
+        when (and coord (> best-cost (compare-tiles i1 x1 y1 i2 x y tile-width tile-height :threshold best-cost)))
           do(setf best coord
-                  best-cost (compare-tiles i1 x1 y1 i2 x y tile-width tile-height))
+                  best-cost (compare-tiles i1 x1 y1 i2 x y tile-width tile-height :threshold best-cost))
         finally (return best))
   )
 (defun mosaify(src dest tile-width tile-height)
   (let ((result (make-image (array-dimension src 1) (array-dimension src 0))))
-    (loop for i in (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0))
-          for x = (car i) then (car i)
-          for y = (cdr i) then (cdr i)
-          for best = (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height )
-          do(copy-tile result x y dest (car best) (cdr best) tile-width tile-height)
-          do(print i)
-          )
+    (loop
+      with tiles = (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0))
+      with jobs = (loop for i in (alexandria:shuffle tiles)
+                        for x = (car i) then (car i)
+                        for y = (cdr i) then (cdr i)
+                        for z from 0
+                        when (zerop(mod z 10))
+                          do(let ((best (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height)))
+                              (copy-tile result x y dest (car best) (cdr best) tile-width tile-height)
+                              (when (zerop (mod z 500))
+                                (print "Finishing tasks")
+                                (pcall:finish-tasks)
+                                (print "Tasks Finished!")
+                                (when (zerop (mod z 1000))
+                                  (format t "Saving at iteration ~a~%" z)
+                                  (save-image result "tmp.png")))
+                              (print i))
+                        else
+                          collecting(let ((x x)
+                                          (y y)
+                                          (i i))
+                                      (pcall:pexec
+                                        (let ((best (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height)))
+                                          (copy-tile result x y dest (car best) (cdr best) tile-width tile-height))
+                                        ))
+;                        for best = (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height )
+;                        collecting(pcall:pexec(copy-tile result x y dest (car best) (cdr best) tile-width tile-height))
+;                        do(print i)
+                        )
+      for i in jobs
+      for c from 0
+      do(pcall:join i))
     result
   ))
 (defun central-pixel-sort (image cx cy
@@ -271,7 +328,7 @@ It is an error to specify images that are of different dimensions"
   (let* ((columns (floor  (array-dimension image1 1) tile-width))
          (rows (floor  (array-dimension image1 0) tile-height))
          (tile-vec (scramble-vector
-                    (loop with r = (make-array 1 :adjustable t :fill-pointer 0 :element-type 'list)
+                    (loop with r = (make-array 1 :adjustable t :fill-pointer 0 :element-type 'list :initial-element nil)
                           for i across (range-vector 0 (* columns rows))
                           do(progn (vector-push-extend (list image1 i) r)
                                    (vector-push-extend (list image2 i) r))
@@ -357,11 +414,11 @@ It is an error to specify images that are of different dimensions"
         (let ((d (- mx mn)))
           (setf s (if (> l 0.5) (/ d (- 2 mx mn)) (/ d (+ mn mx))))
           (setf h
-                (case mx
-                  (r (+ (/ (- g b) d)
+                (cond
+                  ((= r mx) (+ (/ (- g b) d)
                         (if (< g b) 6 0)))
-                  (g (+ 2 (/ (- b r) d)))
-                  (b (+ 4 (/ (- r g) d)))))
+                  ((= g mx) (+ 2 (/ (- b r) d)))
+                  ((= b mx) (+ 4 (/ (- r g) d)))))
           ))
     (vector h s l)))
 
@@ -388,4 +445,4 @@ It is an error to specify images that are of different dimensions"
 
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
           central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2 intensify-blur
-          intensify-blur-nd rgb-to-hsl))
+          intensify-blur-nd rgb-to-hsl mosaify))
