@@ -135,16 +135,17 @@ using the comparison function passed"
         with pix = (make-array '(3) :element-type '(unsigned-byte 8) :initial-element 0)
         do(loop for x fixnum from 0 below tw
                 do(set-pixel dest (the fixnum (+ dx x)) (the fixnum (+ dy y)) (get-pixel src (the fixnum (+ sx x)) (the fixnum (+ sy y)) pix)))))
-(defun compare-tiles(dest dx dy src sx sy width height &key (distance #'color-diff) (threshold 1e15))
+(defun compare-tiles(dest dx dy src sx sy width height &key (distance #'color-diff) (threshold 1e15) (sample-mask nil))
   (declare (type (simple-array (unsigned-byte 8) (* * 3)) dest src)
            (type function distance)
            (type fixnum dx dy sx sy width height)
            (type single-float threshold)
+           (type (or nil (simple-array bit (* *))) sample-mask)
            (type (function ((simple-array (unsigned-byte 8) (3))
                              (simple-array (unsigned-byte 8) (3)))
                             single-float)
                   distance)
-           (optimize speed (safety 0)))
+           (optimize debug (safety 0)))
   (loop for x from 0 below width
         for dpx fixnum = (+ x dx)
         for spx fixnum = (+ x sx)
@@ -157,6 +158,7 @@ using the comparison function passed"
                 for spy = (min (1- (array-dimension src 0)) (+ y sy))
                 for spix = (get-pixel src spx spy pix-a)
                 for dpix = (get-pixel dest dpx dpy pix-b)
+                when (or (not sample-mask) (bit sample-mask y x))
                 do(incf (the single-float total) (funcall distance spix dpix))
                 until(> total threshold)
                 )
@@ -175,64 +177,52 @@ using the comparison function passed"
                                     collecting (cons x y))
                     ))
     )))
-(defun  most-similar-tiles(i1 x1 y1  i2 width height tile-width tile-height &key (distance #'color-diff))
+(defun  most-similar-tiles(i1 x1 y1  i2 width height tile-width tile-height &key (distance #'color-diff) (sample-mask nil))
   "Find the most similar tiles by a given metric. i1 is the image with the tile and i2 is the image you want to find the best tile from.
 Width and height are for i2, hence their place in the order."
-  (declare (optimize speed))
+  (declare (optimize debug))
   (loop for coord in (alexandria:shuffle (tile-coordinates tile-width tile-height width height))
         for x = (car coord) then (car coord)
         for y = (cdr coord) then (cdr coord)
-        for cost = (compare-tiles i1 x1 y1 i2 x y tile-width tile-height :distance distance :threshold (or best-cost 20000.0))
+        for cost = (compare-tiles i1 x1 y1 i2 x y tile-width tile-height :distance distance :threshold (or best-cost 20000.0) :sample-mask sample-mask)
         with best = '(0 . 0)
-        with best-cost = (compare-tiles i1 x1 y1 i2 0 0 tile-width tile-height :distance distance)
+        with best-cost = (compare-tiles i1 x1 y1 i2 0 0 tile-width tile-height :distance distance :sample-mask sample-mask)
         when (and coord (> best-cost cost))
-          do(setf best coord
-                  best-cost cost)
+             do(let* ((alt (cons (+ x (if (= x (- (array-dimension i2 1) 1)) 1 -1)) (+ y (if (= y (- (array-dimension i2 0) 1)) 1 -1))))
+                      (alt-cost (compare-tiles i1 x1 y1 i2 (car alt) (cdr alt) tile-width tile-height :distance distance :threshold best-cost :sample-mask sample-mask)))
+                 (when (> cost alt-cost) (setf coord alt cost alt-cost))
+                 (setf best coord
+                       best-cost cost))
         finally (return best))
   )
-#|
+#|-------------------------------------------------------------------------------------------------------------------------------------------
  | There is some room for improvement here, namely in that it would benefit from being able to pass the whole chunk of the image
- | to a higher order function.
+ | to a higher order function. Example use cases for this change include:
+ |
+ | 1. distance based off of Edge detection
+ |    Cannot be made to reasonably work without having access to the entire tiles at once
+ | 2. Matching tiles based on a specific subset of the pixels in each tile, eg, the pixels on the diagonal lines/the edges
+ | 3. 
  |
  | At the same time, we tend to feel that this is a rather fragile functionality, and that honestly the degree to which it is optimized
  | may present difficulties if other implementations handle the specific typing differently.
- |#
-(defun mosaify(src dest tile-width tile-height &key (save-intermediate t) (distance #'color-diff))
-  (declare (optimize speed)
+ |------------------------------------------------------------------------------------------------------------------------------------------|#
+(defun mosaify(src dest tile-width tile-height &key (save-intermediate t) (distance #'color-diff) (sample-mask nil))
+  (declare (optimize debug)
            (type (simple-array (unsigned-byte 8) (* * 3)) src dest)
            (type fixnum tile-width tile-height))
   (let ((result (make-image (array-dimension src 1) (array-dimension src 0))))
     (loop
-      with tiles = (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0))
-      with jobs = (loop for i in (alexandria:shuffle tiles)
-                        for x fixnum = (car i) then (car i)
-                        for y fixnum = (cdr i) then (cdr i)
-                        for z fixnum from 0
-                        when (zerop (mod z 5))
-                          do(let ((best (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height :distance distance)))
-                              (copy-tile result x y dest (car best) (cdr best) tile-width tile-height)
-                              (when (zerop (mod z 500))
-                                (print "Cleaning up...")
-                                (sleep 0.05) ; Give a small amount of time for the queue to drain.
-                                (sb-ext:gc)
-                                (print "Cleanup Finished!")
-                                (when (and save-intermediate (zerop (mod z 1000)))
-                                  (format t "Saving at iteration ~a~%" z)
-                                  (save-image result "tmp.png")))
-                              (print i))
-                        else
-                          collecting(let ((x x)
-                                          (y y))
-                                      (pcall:pexec
-                                        (let ((best (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height :distance distance)))
-                                          (copy-tile result x y dest (car best) (cdr best) tile-width tile-height))
-                                        ))
-;                        for best = (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height )
-;                        collecting(pcall:pexec(copy-tile result x y dest (car best) (cdr best) tile-width tile-height))
-;                        do(print i)
-                        )
-      for i in jobs
-      for c fixnum from 0
+      with tiles = (alexandria:shuffle (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0)))
+      with jobz = (loop for chunk in (split-n-length tiles 10)
+                        collecting(let ((chunk chunk))
+                                    (pcall:pexec (loop for i in chunk
+                                                       for x fixnum = (car i)
+                                                       for y fixnum = (cdr i)
+                                                       do(let ((best (most-similar-tiles src x y dest (array-dimension dest 1) (array-dimension dest 0) tile-width tile-height :distance distance :sample-mask sample-mask)))
+                                                           (copy-tile result x y dest (car best) (cdr best) tile-width tile-height))
+                                                       ))))
+      for i in jobz
       do(pcall:join i))
     result
   ))
