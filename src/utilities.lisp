@@ -53,4 +53,13 @@
       `(if ,test 0 (progn ,@body))
       `(if ,test 0 ,@body)))
 
+(defmacro do-image-region((x y r g b) start-x start-y end-x end-y (image &optional (sx 1) (sy 1))  &body body)
+      `(loop for ,y from ,start-y below ,end-y by ,sy
+         do ,(append `(loop for ,x from ,start-x below ,end-x by ,sx )
+                     (when r `(with ,r = (aref ,image ,y ,x 0)))
+                     (when g `(with ,g = (aref ,image ,y ,x 1)))
+                     (when b `(with ,b = (aref ,image ,y ,x 2)))
+                     `(do (progn ,@body)))
+                 ))
+
 

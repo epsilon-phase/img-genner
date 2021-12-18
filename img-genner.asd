@@ -4,7 +4,10 @@
   :licence "Nonviolent Public License"
   :depends-on ("png" "cl-jpeg"
                      "alexandria"
-                     "pcall")
+                     "pcall"
+                     #+sbcl
+                     "sb-simd"
+                     )
   :components ((:file "src/package")
                (:file "src/triangularization/triangles")
                (:file "src/utilities")

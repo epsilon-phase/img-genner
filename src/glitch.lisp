@@ -115,7 +115,7 @@ using the comparison function passed"
          ))
 (defun color-hue(c1 c2)
   (declare (type (simple-array (unsigned-byte 8) (3)) c1 c2)
-           (optimize speed))
+           (optimize speed (safety 0)))
   (let ((r1 (aref c1 0))
         (r2 (aref c2 0))
         (g1 (aref c1 1))
@@ -124,7 +124,8 @@ using the comparison function passed"
         (b2 (aref c2 2)))
     (let ((h1 (rgb-to-hsl r1 g1 b1))
           (h2 (rgb-to-hsl r2 g2 b2)))
-      (declare (type (simple-array single-float (3) ) h1 h2))
+      (declare (type (simple-array single-float (3) ) h1 h2)
+               (dynamic-extent h1 h2))
       (expt (- (aref h1 0) (aref h2 0)) 2.0)
     )))
 (defun copy-tile(dest dx dy src sx sy tw th)
@@ -140,13 +141,14 @@ using the comparison function passed"
            (type function distance)
            (type fixnum dx dy sx sy width height)
            (type single-float threshold)
-           (type (or nil (simple-array bit (* *))) sample-mask)
+           (type (or null (simple-array bit (* *))) sample-mask)
            (type (function ((simple-array (unsigned-byte 8) (3))
                              (simple-array (unsigned-byte 8) (3)))
                             single-float)
                   distance)
-           (optimize debug (safety 0)))
-  (loop for x from 0 below width
+           (optimize speed (safety 0)))
+  (loop with not-empty = nil
+        for x from 0 below width
         for dpx fixnum = (+ x dx)
         for spx fixnum = (+ x sx)
         with threshold = (* threshold threshold)
@@ -158,42 +160,68 @@ using the comparison function passed"
                 for spy = (min (1- (array-dimension src 0)) (+ y sy))
                 for spix = (get-pixel src spx spy pix-a)
                 for dpix = (get-pixel dest dpx dpy pix-b)
+;               when (or (> (max (aref dpix 0) (aref dpix 1) (aref dpix 2)) 20))
+;                  do(setf not-empty t)
                 when (or (not sample-mask) (bit sample-mask y x))
                 do(incf (the single-float total) (funcall distance spix dpix))
                 until(> total threshold)
                 )
         until (> total threshold)
-        finally (return (the single-float (sqrt total))))
+        finally (return (the single-float (if t (sqrt total) (* 2 threshold)))))
   )
-(let ((cache (make-hash-table :test 'equal :synchronized t)))
-  (defun tile-coordinates(tile-width tile-height image-width image-height)
-    (if (gethash (list tile-width tile-height image-width image-height) cache)
-        (gethash (list tile-width tile-height image-width image-height) cache)
-        (setf (gethash (list tile-width tile-height image-width image-height) cache)
+(defun tile-coordinates(tile-width tile-height image-width image-height)
               (loop for y from 0 below (* tile-height (floor image-height tile-height)) by tile-height
                     until (> (+ y tile-height) image-height);cut off partial tiles :3
                     appending (loop for x from 0 below (* tile-width (floor image-width tile-width)) by tile-width
                                     until(> (+ x tile-width) image-width)
                                     collecting (cons x y))
                     ))
-    )))
+#+sbcl (declaim (sb-ext:maybe-inline improve-tile))
+(defun improve-tile(i1 x1 y1 i2 x2 y2 tw th cost distance sample-mask)
+  "Attempt to shift the tile diagonally a bit, so long as the match is better than the current one"
+  (declare (optimize speed)
+           (type fixnum x1 y1 x2 y2 tw th)
+           (type single-float cost)
+           (type (simple-array bit (* *)))
+           (type (simple-array (unsigned-byte 8) (* * 3)) i1 i2))
+  (loop with best-x = x2
+        with best-y = y2
+        with best-cost = cost
+        for offset fixnum from 1
+        for x fixnum = (+ x2 offset)
+        until (>= (+ tw x) (1- (array-dimension i2 1)))
+        for y fixnum = (+ y2 offset)
+        until (>= (+ th y) (1- (array-dimension i2 0)))
+        for ncost = (compare-tiles i1 x1 y1 i2 x y tw th :distance distance :sample-mask sample-mask)
+        until (<= best-cost ncost)
+        when (< ncost best-cost)
+          do(progn
+              (setf best-cost ncost
+                    best-x x
+                    best-y y))
+        finally (progn
+                  (return (cons best-x best-y)))
+        )
+  )
 (defun  most-similar-tiles(i1 x1 y1  i2 width height tile-width tile-height &key (distance #'color-diff) (sample-mask nil))
   "Find the most similar tiles by a given metric. i1 is the image with the tile and i2 is the image you want to find the best tile from.
 Width and height are for i2, hence their place in the order."
-  (declare (optimize debug))
+  (declare (optimize speed))
   (loop for coord in (alexandria:shuffle (tile-coordinates tile-width tile-height width height))
-        for x = (car coord) then (car coord)
-        for y = (cdr coord) then (cdr coord)
+        for x fixnum = (car coord) then (car coord)
+        for y fixnum = (cdr coord) then (cdr coord)
         for cost = (compare-tiles i1 x1 y1 i2 x y tile-width tile-height :distance distance :threshold (or best-cost 20000.0) :sample-mask sample-mask)
         with best = '(0 . 0)
         with best-cost = (compare-tiles i1 x1 y1 i2 0 0 tile-width tile-height :distance distance :sample-mask sample-mask)
         when (and coord (> best-cost cost))
-             do(let* ((alt (cons (+ x (if (= x (- (array-dimension i2 1) 1)) 1 -1)) (+ y (if (= y (- (array-dimension i2 0) 1)) 1 -1))))
+                                        ;This seems like it could be extended to keep on following the improvement until it stops improving, but the
+                                        ;details are taxing to us right now and we are putting it off for later
+             do(let* ((alt (cons (+ x (the fixnum (if (= x (the fixnum (- (array-dimension i2 1) 1))) 1 -1))) (+ y (if (= y (- (array-dimension i2 0) 1)) 1 -1))))
                       (alt-cost (compare-tiles i1 x1 y1 i2 (car alt) (cdr alt) tile-width tile-height :distance distance :threshold best-cost :sample-mask sample-mask)))
                  (when (> cost alt-cost) (setf coord alt cost alt-cost))
                  (setf best coord
                        best-cost cost))
-        finally (return best))
+        finally (return  (improve-tile i1 x1 y1 i2 (car best) (cdr best) tile-width tile-height best-cost distance sample-mask)))
   )
 #|-------------------------------------------------------------------------------------------------------------------------------------------
  | There is some room for improvement here, namely in that it would benefit from being able to pass the whole chunk of the image
@@ -207,14 +235,16 @@ Width and height are for i2, hence their place in the order."
  | At the same time, we tend to feel that this is a rather fragile functionality, and that honestly the degree to which it is optimized
  | may present difficulties if other implementations handle the specific typing differently.
  |------------------------------------------------------------------------------------------------------------------------------------------|#
-(defun mosaify(src dest tile-width tile-height &key (save-intermediate t) (distance #'color-diff) (sample-mask nil))
-  (declare (optimize debug)
+(defun mosaify(src dest tile-width tile-height &key (save-intermediate t) (distance #'color-diff) (sample-mask nil) (shuffle-tiles t))
+  (declare (optimize speed)
            (type (simple-array (unsigned-byte 8) (* * 3)) src dest)
            (type fixnum tile-width tile-height))
   (let ((result (make-image (array-dimension src 1) (array-dimension src 0))))
     (loop
-      with tiles = (alexandria:shuffle (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0)))
-      with jobz = (loop for chunk in (split-n-length tiles 10)
+      with tile-count = (* (floor (array-dimension src 0) tile-height) (floor (array-dimension src 1) tile-width))
+      with tiles = (if shuffle-tiles (alexandria:shuffle (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0)))
+                       (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0)))
+      with jobz = (loop for chunk in (split-n-length tiles (ceiling (/ tile-count (pcall:thread-pool-size))))
                         collecting(let ((chunk chunk))
                                     (pcall:pexec (loop for i in chunk
                                                        for x fixnum = (car i)
