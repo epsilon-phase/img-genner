@@ -5,8 +5,6 @@
   :depends-on ("png" "cl-jpeg"
                      "alexandria"
                      "pcall"
-                     #+sbcl
-                     "sb-simd"
                      )
   :components ((:file "src/package")
                (:file "src/triangularization/triangles")

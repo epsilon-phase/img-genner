@@ -244,7 +244,7 @@ Width and height are for i2, hence their place in the order."
       with tile-count = (* (floor (array-dimension src 0) tile-height) (floor (array-dimension src 1) tile-width))
       with tiles = (if shuffle-tiles (alexandria:shuffle (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0)))
                        (tile-coordinates tile-width tile-height (array-dimension src 1) (array-dimension src 0)))
-      with jobz = (loop for chunk in (split-n-length tiles (ceiling (/ tile-count (pcall:thread-pool-size))))
+      with jobz = (loop for chunk in (split-n-length tiles (ceiling tile-count (pcall:thread-pool-size)))
                         collecting(let ((chunk chunk))
                                     (pcall:pexec (loop for i in chunk
                                                        for x fixnum = (car i)

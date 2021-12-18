@@ -47,9 +47,6 @@
                      (aref color 2) (aref image y x 2))
                color)
         (loop for i fixnum from 0 below (array-dimension color 0)
-              #+sbcl
-              do(setf (sb-simd:u8-aref color i) (sb-simd:u8-aref image y x i))
-              #-sbcl
               do(setf (aref color i) (aref image y x i))
               finally (return color)
               )
