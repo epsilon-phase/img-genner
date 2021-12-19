@@ -32,6 +32,8 @@
                                 (- x2 x1))
                              ))))))
 
+#+sbcl
+(declaim (sb-ext:maybe-inline line-index-interpolator))
 (defun line-index-interpolator(x1 y1 x2 y2 &optional (buffer nil))
   (declare (optimize (speed 3))
            (type fixnum x1 y1 x2 y2)
@@ -63,6 +65,4 @@
             )
       ))
   )
-#+sbcl
-(declaim (sb-ext:maybe-inline line-index-interpolator))
 (export '(poly-linear-interpolator line-index-interpolator))

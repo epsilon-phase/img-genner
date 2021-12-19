@@ -169,6 +169,10 @@ using the comparison function passed"
         until (> total threshold)
         finally (return (the single-float (if t (sqrt total) (* 2 threshold)))))
   )
+#+sbcl
+(declaim (sb-ext:maybe-inline tile-coordinates))
+#-sbcl
+(declaim (inline tile-coordinates))
 (defun tile-coordinates(tile-width tile-height image-width image-height)
               (loop for y from 0 below (* tile-height (floor image-height tile-height)) by tile-height
                     until (> (+ y tile-height) image-height);cut off partial tiles :3
@@ -287,7 +291,7 @@ Width and height are for i2, hence their place in the order."
                   do(sort-along-line image i comparison)
                   )
           )
-    ))
+    image))
 (defun fuck-it-up-pixel-sort (image cx cy
                            &key
                              (comparison #'compare-colors-bytewise)
