@@ -298,11 +298,13 @@ Width and height are for i2, hence their place in the order."
   (declare (type fixnum cx cy segment-length)
            (type (simple-array (unsigned-byte 8) (* * *)) image)
            (optimize (speed 2)))
+  (setf image (copy-image image))
   (loop for y from 0 below (array-dimension image 0)
         do(loop for x from 0 below (array-dimension image 1)
                 do(loop for i in (split-n-length (line-index-interpolator x y cx cy) segment-length)
                         do(sort-along-line image i comparison)
                         ))
+        finally (return image)
         )
   )
 (defun swap-tiles(image tile-width tile-height x1 y1 x2 y2)
@@ -527,7 +529,7 @@ It is an error to specify images that are of different dimensions"
                                    (map 'list
                                         (lambda (x) (floor x z))
                                         (list ar ag ab))))))
-(defun downscalex2(image)
+(defun downscale-x2(image)
   (let ((i2 (make-image (floor (array-dimension image 1) 2) (floor (array-dimension image 0) 2))))
     (do-image-region (x y) 0 0 (array-dimension i2 1) (array-dimension i2 0) (i2 1 1)
       (let ((c (average-color image (* x 2) (* y 2) (1+ (* x 2 )) (1+ (* y 2)))))
@@ -563,6 +565,42 @@ It is an error to specify images that are of different dimensions"
             )
       )
     result-image))
+(defun sample-image(image x y &optional output-buffer)
+  (declare (type (or (simple-array (unsigned-byte 8) (3)) null) output-buffer))
+  (unless output-buffer (setf output-buffer (make-array 3 :element-type '(unsigned-byte 8) :initial-element 0)))
+  (multiple-value-bind (x-floor x-remainder) (floor x)
+    (multiple-value-bind (y-floor y-remainder) (floor y)
+      (let ((y-ceil (ceiling y))
+            (x-ceil (ceiling x)))
+        (loop for i from 0 below 3
+              do(setf (aref output-buffer i)
+                      (floor (min 255 (interpolate-4 x-remainder y-remainder
+                                     (aref image y-floor x-floor i)
+                                     (aref image y-floor x-ceil i)
+                                     (aref image y-ceil x-floor i)
+                                     (aref image y-ceil x-ceil i)))))
+              finally(return output-buffer)))
+      )))
+(defun upscale-image-by-factor(image xscale yscale)
+                                        ; There are issues here that are substantial and significant.
+                                        ; Among them is the fact that it doesn't appear to handle
+                                        ;  residuals properly when the remainders are around 0.0,0.0
+                                        ; Either way, it's fast and we don't mind the effect
+  (let ((new-width (floor (* xscale (array-dimension image 1))))
+        (new-height (floor (* yscale (array-dimension image 0)))))
+    (loop with result = (make-image new-width new-height)
+          with y-increment = (float (/ (array-dimension image 0) new-height))
+          with x-increment = (float (/ (array-dimension image 1) new-width))
+          with pix = (make-array 3 :element-type '(unsigned-byte 8))
+          for y from 0 below new-height
+          for sy from 0.0 below (1- (array-dimension image 0)) by y-increment
+          do(loop for x from 0 below new-width
+                  for sx from 0.0 below (1- (array-dimension image 1)) by x-increment
+                  do(set-pixel result
+                               x (- new-height 1 y)
+                               (sample-image image sx sy pix))
+                  )
+          finally(return result))))
 (defun to-fractional-color(r g b)
   (map 'vector (lambda (a) (/ a 255.0)) (list r g b)))
 (defun from-fractional-color(r g b)
@@ -570,4 +608,5 @@ It is an error to specify images that are of different dimensions"
 
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
           central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2 intensify-blur
-          intensify-blur-nd rgb-to-hsl mosaify))
+          intensify-blur-nd rgb-to-hsl mosaify upscale-x2-linear upscale-image-by-factor
+          downscale-x2 color-brightness color-diff color-hue))

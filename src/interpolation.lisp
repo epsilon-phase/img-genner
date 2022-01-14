@@ -1,4 +1,5 @@
 (in-package img-genner)
+(declaim (inline lerp interpolate-4))
 (defun lerp(p1 p2 f)
   (typecase p1
     (vector
@@ -10,6 +11,13 @@
     (t (+ (* (- 1 f) p1) (* f p2)))
     )
   )
+(defun interpolate-4(x y a b c d)
+  (declare (type (single-float 0.0 1.0) x y)
+           (type number a b c d))
+  (+ (* a (- 1 (max x y (* x y) 0)))
+     (* b(- x (* x y)))
+     (* c (max (- y (* x y)) 0))
+     (* d (min x (* x y)))))
 
 (defun poly-linear-interpolator(xs ys x)
   (cond
@@ -65,4 +73,4 @@
             )
       ))
   )
-(export '(poly-linear-interpolator line-index-interpolator))
+(export '(poly-linear-interpolator line-index-interpolator interpolate-4))

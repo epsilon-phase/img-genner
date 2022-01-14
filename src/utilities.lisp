@@ -25,7 +25,7 @@
     r
     ))
 (defun copy-image(image)
-  (declare (type (simple-array t (* * *)) image))
+  (declare (type (simple-array * (* * *)) image))
   (loop with new = (make-array (array-dimensions image) :element-type (array-element-type image))
         for y from 0 below (array-dimension image 0)
         do(loop for x from 0 below (array-dimension image 1)
