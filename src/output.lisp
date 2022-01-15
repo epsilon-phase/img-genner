@@ -364,7 +364,6 @@ based on how far the coordinate is along the line"
 (defmethod fill-shape((e ellipse) image stroker)
   (fill-ellipse e image stroker))
 (defmethod fill-shape ((p polygon) image stroker)
-  (print "clip clip clipping:)")
   (loop for (a b c) in (img-genner/triangularization:earclip (get-points p))
         do(fill-triangle a c b image stroker)))
 (defmethod fill-shape((p t) image stroker)
