@@ -14,6 +14,9 @@
   (:documentation "Retrieve the line segment point pairs that comprise the outline of the shape"))
 (defgeneric get-points(shape &key max-degree)
   (:documentation "Get the points comprising the outline of the shape"))
+(defgeneric set-rotation(shape rotation))
+(defmethod set-rotation((shape shape) rotation)
+  (setf (slot-value shape 'rotation) rotation))
 (let ((theta-last 0.0)
       (s-theta 0.0)
       (c-theta 1.0))
@@ -64,7 +67,7 @@
     (setf (slot-value a 'origin)
           (point center-x center-y)
           (slot-value a 'radius)
-          (vector radius-x radius-y))
+          (make-array 2 :element-type 'single-float :initial-contents (list radius-x radius-y)))
     a
     )
   )
@@ -76,7 +79,7 @@
            :documentation "The height of the rectangle"))
   (:documentation "A rectangle"))
 (defclass polygon(shape)
-  ((points :initform nil :type 'list
+  ((points :initform nil :type list :initarg :points
            :documentation "The points that make up the polygon"))
   (:documentation "A polygon with no guarantees"))
 (defclass convex-polygon(polygon)()
@@ -89,12 +92,20 @@
   (setf (aref (slot-value r 'origin) 0) (coerce 'single-float x)
         (aref (slot-value r 'origin) 1) (coerce 'single-float y)))
 (defun make-rectangle(x y width height)
+  "Create a rectangle at a given location of a given dimension"
   (let ((a (make-instance 'rectangle)))
     (setf (slot-value a 'origin) (point x y)
           (slot-value a 'width) width
           (slot-value a 'height) height)
     a
     ))
+(defun make-regular-polygon(x y n radius)
+  (declare (type (integer 3 1000) n)
+           (type single-float radius x y))
+  (make-instance 'polygon :origin (point x y)
+                          :points (loop for i from n above 0
+                                        for theta from 0.0 by (/ (* 2 pi) n)
+                                        collecting (point (* (cos theta) radius) (* (sin theta) radius)))))
 (defmethod bounds((c ellipse))
   (with-slots (origin radius) c
     (list
@@ -221,4 +232,4 @@ in a closed path"
 
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
 (Declaim (ftype (function (t t t) (values single-float single-float)) adjust-point))
-(export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection rotate-around))
+(export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection rotate-around set-rotation make-regular-polygon))

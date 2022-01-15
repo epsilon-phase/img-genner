@@ -277,6 +277,7 @@ based on how far the coordinate is along the line"
                                             lines))
                         #'compare-points)))))
   image)
+
 (defun fill-ellipse(ellipse image stroker)
   (declare (type ellipse ellipse)
            (type (simple-array (unsigned-byte 8) (* * *)) image)
@@ -363,8 +364,9 @@ based on how far the coordinate is along the line"
 (defmethod fill-shape((e ellipse) image stroker)
   (fill-ellipse e image stroker))
 (defmethod fill-shape ((p polygon) image stroker)
+  (print "clip clip clipping:)")
   (loop for (a b c) in (img-genner/triangularization:earclip (get-points p))
-        do(fill-triangle a b c image stroker)))
+        do(fill-triangle a c b image stroker)))
 (defmethod fill-shape((p t) image stroker)
   (fill-polygon p image stroker))
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
