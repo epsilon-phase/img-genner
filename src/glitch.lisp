@@ -294,17 +294,30 @@ Width and height are for i2, hence their place in the order."
 (defun fuck-it-up-pixel-sort (image cx cy
                            &key
                              (comparison #'compare-colors-bytewise)
-                             (segment-length 20))
+                             (segment-length 20)
+                             (parallel nil)
+                             (fuckedness 1/4))
   (declare (type fixnum cx cy segment-length)
            (type (simple-array (unsigned-byte 8) (* * *)) image)
+           (type number fuckedness)
            (optimize (speed 2)))
   (setf image (copy-image image))
-  (loop for y from 0 below (array-dimension image 0)
-        do(loop for x from 0 below (array-dimension image 1)
-                do(loop for i in (split-n-length (line-index-interpolator x y cx cy) segment-length)
-                        do(sort-along-line image i comparison)
-                        ))
-        finally (return image)
+  (loop for y fixnum  from 0 below (array-dimension image 0) by (max 1 (floor (* fuckedness segment-length)))
+        when (not parallel)
+          do(loop for x from 0 below (array-dimension image 1) by (max 1 (floor (* fuckedness segment-length)))
+                  do(loop for i in (split-n-length (line-index-interpolator x y cx cy) segment-length)
+                          do(sort-along-line image i comparison)
+                          ))
+          and do(format t "~a/~a~%" y (array-dimension image 0))
+        else
+          collecting (let ((y y))
+                       (pcall:pexec (loop for x from 0 below (array-dimension image 1)
+                                          do(loop for i in (split-n-length (line-index-interpolator x y cx cy) segment-length)
+                                                  do(sort-along-line image i comparison)
+                                                  ))
+                         (print y))) into tasks
+        finally (progn (loop for i in tasks do(pcall:join i))
+                       (return image))
         )
   )
 (defun swap-tiles(image tile-width tile-height x1 y1 x2 y2)
@@ -477,7 +490,7 @@ It is an error to specify images that are of different dimensions"
            (type (unsigned-byte 8) r g b))
   (let* ((r (/ r 255.0))
          (g (/ g 255.0))
-         (b (/ b 255.0))
+         (b (/ b 255.0)) 
          (mx (max r g b))
          (mn (min r g b))
          (l (/ (+ mx mn) 2.0))
@@ -581,16 +594,20 @@ It is an error to specify images that are of different dimensions"
                                      (aref image y-ceil x-ceil i)))))
               finally(return output-buffer)))
       )))
-(defun upscale-image-by-factor(image xscale yscale)
-                                        ; There are issues here that are substantial and significant.
-                                        ; Among them is the fact that it doesn't appear to handle
-                                        ;  residuals properly when the remainders are around 0.0,0.0
-                                        ; Either way, it's fast and we don't mind the effect
+(defun upscale-image-by-factor(image xscale yscale &optional image-buffer)
+  (declare (type (simple-array (unsigned-byte 8) (* * 3)) image)
+           (type (single-float 0.0 10000.0) xscale yscale)
+           (type (or null (simple-array (unsigned-byte 8) (* * 3))) image-buffer)
+           (optimize speed))
   (let ((new-width (floor (* xscale (array-dimension image 1))))
         (new-height (floor (* yscale (array-dimension image 0)))))
-    (loop with result = (make-image new-width new-height)
-          with y-increment = (float (/ (array-dimension image 0) new-height))
-          with x-increment = (float (/ (array-dimension image 1) new-width))
+    (declare (type (integer 1 10000000) new-height new-width))
+    (loop with result = (if (and image-buffer
+                                 (equalp (array-dimensions image-buffer) `(,new-width ,new-height 3)))
+                            image-buffer
+                            (make-image new-width new-height))
+          with y-increment single-float = (float (/ (array-dimension image 0) new-height))
+          with x-increment single-float = (float (/ (array-dimension image 1) new-width))
           with pix = (make-array 3 :element-type '(unsigned-byte 8))
           for y from 0 below new-height
           for sy from 0.0 below (1- (array-dimension image 0)) by y-increment

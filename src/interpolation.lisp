@@ -1,5 +1,5 @@
 (in-package img-genner)
-(declaim (inline lerp interpolate-4))
+(declaim (inline lerp interpolate-4 line-index-interpolator))
 (defun lerp(p1 p2 f)
   (typecase p1
     (vector
@@ -40,9 +40,11 @@
                                 (- x2 x1))
                              ))))))
 
-#+sbcl
-(declaim (sb-ext:maybe-inline line-index-interpolator))
+
 (defun line-index-interpolator(x1 y1 x2 y2 &optional (buffer nil))
+  "Fill a buffer with the coordinates of points along a line.
+
+   The buffer(a vector) may be supplied in order to reuse a buffer but will otherwise be created."
   (declare (optimize (speed 3))
            (type fixnum x1 y1 x2 y2)
            (type (or null (vector cons)) buffer)
@@ -73,4 +75,5 @@
             )
       ))
   )
+
 (export '(poly-linear-interpolator line-index-interpolator interpolate-4))
