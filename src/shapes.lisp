@@ -242,3 +242,5 @@ in a closed path"
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
 (Declaim (ftype (function (t t t) (values single-float single-float)) adjust-point))
 (export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection rotate-around set-rotation make-regular-polygon move-to move-by rotate-by))
+;; Class member export
+(export '(origin rotation points))
