@@ -1,7 +1,7 @@
 (defsystem "img-genner"
   :version "0.0.1"
   :author "Violet White"
-  :licence "Nonviolent Public License"
+  :licence "MIT"
   :depends-on ("png" "cl-jpeg"
                      "alexandria"
                      "pcall"
