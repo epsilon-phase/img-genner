@@ -35,7 +35,7 @@
   "Sort according to the values of pixels in image along the coordinate pairs in line
 using the comparison function passed"
   (declare (optimize (speed 3))
-           (type (simple-array (unsigned-byte 8) (* * 3)) image)
+           (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type (vector cons) line)
            (type (function (vector vector)
                            boolean)
@@ -45,8 +45,9 @@ using the comparison function passed"
   (let ((comb-length (length line))
         (sorted nil)
         (shrink 1.3)
-        (color-a (make-array 3 :element-type '(unsigned-byte 8)))
-        (color-b (make-array 3 :element-type '(unsigned-byte 8))))
+        (color-a (make-array (min 4 (array-dimension image 2)) :element-type '(unsigned-byte 8)))
+        (color-b (make-array (min 4 (array-dimension image 2)) :element-type '(unsigned-byte 8))))
+    (declare (dynamic-extent color-a color-b))
     (loop for gap fixnum = comb-length then (floor gap shrink)
                                         ;Implementation of Comb sort, as it is fast,
                                         ;lightweight, and very easy to write
@@ -93,18 +94,14 @@ using the comparison function passed"
           )
     ))
 (defun color-diff(c1 c2)
-  (declare (type (simple-array (unsigned-byte 8) (3)) c1 c2)
+  (declare (type (simple-array (unsigned-byte 8) (*)) c1 c2)
            (optimize speed (safety 0)))
-  (let* ((r1 (aref c1 0))
-         (r2 (aref c2 0))
-         (g1 (aref c1 1))
-         (g2 (aref c2 1))
-         (b1 (aref c1 2))
-         (b2 (aref c2 2))
-         (dr (coerce (- r1 r2) 'single-float))
-         (dg (coerce (- g1 g2) 'single-float))
-         (db (coerce (- b1 b2) 'single-float)))
-    (+ (* dr dr) (* dg dg) (* db db))))
+  (loop for a across c1
+        for b across c2
+        for d = (coerce (- a b) 'single-float)
+        with total single-float = 0.0
+        do(incf total (* d d))
+        finally(return total)))
 (defun color-brightness(c1 c2)
   (declare (type (simple-array (unsigned-byte 8) (3)) c1 c2)
            (optimize speed (safety 0)))
@@ -114,7 +111,7 @@ using the comparison function passed"
          (* d d)
          ))
 (defun color-hue(c1 c2)
-  (declare (type (simple-array (unsigned-byte 8) (3)) c1 c2)
+  (declare (type (simple-array (unsigned-byte 8) (*)) c1 c2)
            (optimize speed (safety 0)))
   (let ((r1 (aref c1 0))
         (r2 (aref c2 0))
@@ -136,7 +133,7 @@ using the comparison function passed"
         do(loop for x fixnum from 0 below tw
                 do(set-pixel dest (the fixnum (+ dx x)) (the fixnum (+ dy y)) (get-pixel src (the fixnum (+ sx x)) (the fixnum (+ sy y)) pix)))))
 (defun compare-tiles(dest dx dy src sx sy width height &key (distance #'color-diff) (threshold 1e15) (sample-mask nil))
-  (declare (type (simple-array (unsigned-byte 8) (* * 3)) dest src)
+  (declare (type (simple-array (unsigned-byte 8) (* * *)) dest src)
            (type function distance)
            (type fixnum dx dy sx sy width height)
            (type single-float threshold)
@@ -186,7 +183,7 @@ using the comparison function passed"
            (type fixnum x1 y1 x2 y2 tw th)
            (type single-float cost)
            (type (simple-array bit (* *)))
-           (type (simple-array (unsigned-byte 8) (* * 3)) i1 i2))
+           (type (simple-array (unsigned-byte 8) (* * *)) i1 i2))
   (loop with best-x = x2
         with best-y = y2
         with best-cost = cost
@@ -523,6 +520,22 @@ It is an error to specify images that are of different dimensions"
                       (funcall func r1 g1 b1)
                     (set-pixel-rgb image ix iy r g b))))
   )
+(defun colorize-naive(image color &optional buffer)
+  (unless buffer (setf buffer (copy-image image)))
+  (loop for y from 0 below (array-dimension image 0)
+        do(loop for x from 0 below (array-dimension image 1)
+                for a = (get-pixel image x y a)
+                do(loop for i in color
+                        for diff = (color-diff a i)
+                        with best-cost = 1000000
+                        with best = nil
+                        when (< diff best-cost)
+                             do (setf best-cost diff
+                                      best i)
+                        finally (set-pixel buffer x y best)
+                        )
+                ))
+  buffer)
 (defun region-size(x1 y1 x2 y2)
   (* (max 1 (- x2 x1))
      (max 1 (- y2 y1))))
@@ -553,7 +566,7 @@ It is an error to specify images that are of different dimensions"
 (declaim (sb-ext:maybe-inline pixel-midpoint))
 (defun pixel-midpoint(image x1 y1 x2 y2 c)
   (declare (optimize speed (safety 0))
-           (type (simple-array (unsigned-byte 8) (* * 3)) image)
+           (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type fixnum x1 y1 x2 y2 c)
            )
   (floor
@@ -561,7 +574,7 @@ It is an error to specify images that are of different dimensions"
    2))
 (defun upscale-x2-linear(image)
   (declare (optimize speed)
-           (type (simple-array (unsigned-byte 8) (* * 3)) image))
+           (type (simple-array (unsigned-byte 8) (* * *)) image))
   (let ((result-image (make-image (* (array-dimension image 0) 2) (* (array-dimension image 1) 2))))
     (do-image-region (x y) 0 0 (array-dimension image 1) (array-dimension image 0) (image)
       (loop with cx fixnum = (* x 2)
@@ -579,13 +592,13 @@ It is an error to specify images that are of different dimensions"
       )
     result-image))
 (defun sample-image(image x y &optional output-buffer)
-  (declare (type (or (simple-array (unsigned-byte 8) (3)) null) output-buffer))
-  (unless output-buffer (setf output-buffer (make-array 3 :element-type '(unsigned-byte 8) :initial-element 0)))
+  (declare (type (or (simple-array (unsigned-byte 8) (*)) null) output-buffer))
+  (unless output-buffer (setf output-buffer (make-array (array-dimension image 2) :element-type '(unsigned-byte 8) :initial-element 0)))
   (multiple-value-bind (x-floor x-remainder) (floor x)
     (multiple-value-bind (y-floor y-remainder) (floor y)
       (let ((y-ceil (ceiling y))
             (x-ceil (ceiling x)))
-        (loop for i from 0 below 3
+        (loop for i from 0 below (array-dimension image 2)
               do(setf (aref output-buffer i)
                       (floor (min 255 (interpolate-4 x-remainder y-remainder
                                      (aref image y-floor x-floor i)
@@ -626,4 +639,4 @@ It is an error to specify images that are of different dimensions"
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
           central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2 intensify-blur
           intensify-blur-nd rgb-to-hsl mosaify upscale-x2-linear upscale-image-by-factor
-          downscale-x2 color-brightness color-diff color-hue))
+          downscale-x2 color-brightness color-diff color-hue colorize-naive))

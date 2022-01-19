@@ -32,8 +32,8 @@
 (declaim (sb-ext:maybe-inline get-pixel))
 (defun get-pixel(image x y &optional (result-vec nil))
   (declare (type fixnum x y)
-           (type (simple-array (unsigned-byte 8) (* * 3)) image)
-           (type (or null (simple-array (unsigned-byte 8) (3))) result-vec)
+           (type (simple-array (unsigned-byte 8) (* * *)) image)
+           (type (or null (simple-array (unsigned-byte 8) (*))) result-vec)
            (optimize (speed 3) (safety 0)))
   (let ((color (if result-vec result-vec (make-array (array-dimension image 2) :element-type '(unsigned-byte 8))))
         (x (min (1- (array-dimension image 1)) (max x 0)))
@@ -239,8 +239,6 @@ based on how far the coordinate is along the line"
         (declare (type fixnum err delta-y y-step delta-x y))
         (loop for x from x1 to x2
               do(progn
-                ;  (format t "~a,~a +~a ~~~a" x y y-step err)
-  ;                (terpri)
                   (if steep
                       (funcall stroker image y x 0.0)
                       (funcall stroker image x y 0.0))
@@ -398,7 +396,8 @@ based on how far the coordinate is along the line"
                                                                     (aref im y x 0)))
                                                    finally (return im)))))))))
 (defun save-image(image filename &key (quality 64))
-  "Save an image to the given filename, selecting png or jpeg compression based on the extension. The quality number is Mysterious, and only applies to the jpeg encoder."
+  "Save an image to the given filename, selecting png or jpeg compression based on the extension. The quality number is Mysterious, and only applies to the jpeg encoder.
+If the filename is actually a stream, then it will be written to the stream as a "
   (if (output-stream-p filename)
       (png:encode image filename)
       (let ((ext (subseq filename (1+ (position #\. filename :from-end t)))))
@@ -432,11 +431,21 @@ based on how far the coordinate is along the line"
   (declare (type fixnum width height)
            (type (simple-array (unsigned-byte 8)) default-color)
            (optimize speed))
-  (loop with image = (make-array `(,height ,width 3) :element-type '(unsigned-byte 8))
+  (loop with image = (make-array `(,height ,width ,(array-dimension default-color 0)) :element-type '(unsigned-byte 8))
         for y from 0 below (array-dimension image 0)
         do(loop for x from 0 below (array-dimension image 1)
                 do(setf (aref image y x 0) (aref default-color 0)
                         (aref image y x 1) (aref default-color 1)
                         (aref image y x 2) (aref default-color 2)))
         finally (return image)))
+
+(defun add-alpha-channel(image &optional (default-alpha 255))
+  (let ((result (make-array `(,(array-dimension image 0) ,(array-dimension image 1) 4))))
+    (loop for y from 0 below (array-dimension image 0)
+          do(loop for x below (array-dimension image 1)
+                  do(loop for c from 0 below (array-dimension image 2)
+                          do(setf (aref result y x c) (aref image y x c)))
+                  do(setf (aref result y x 3) default-alpha)))
+    result))
+
 (export '(save-image load-image make-image))

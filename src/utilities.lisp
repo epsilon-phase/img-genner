@@ -33,6 +33,7 @@
                         do(setf (aref new y x c)
                                 (aref image y x c))))
         finally (return new)))
+(export '(copy-image))
 
 (defmacro whenv(test value &body body)
   (if (> 1 (length body))
