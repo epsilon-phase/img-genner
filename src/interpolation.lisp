@@ -12,7 +12,7 @@
     )
   )
 (defun interpolate-4(x y a b c d)
-  (declare (type (single-float 0.0 1.0) x y)
+  (declare (type (single-float -0.01 1.01) x y)
            (type number a b c d))
   (+ (* a (- 1 (max x y (* x y) 0)))
      (* b(- x (* x y)))

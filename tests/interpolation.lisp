@@ -30,9 +30,8 @@
     ))
   )
 (deftest interpolate-4-test
-  (testing "Basics"
-    (loop for (x . y) in '((0.0 . 0.0) (1.0 . 0.0) (0.0 . 1.0) (1.0 1.0))
-          with a = 2 with b = 4 with c = 5 with d = 4
-          for answer in (list a b c d)
-          do(ok (equalp answer (interpolate-4 x y a b c d)))))
-  )
+    (testing "Basics"
+             (ok (equalp (interpolate-4 0.0 0.0 2.0 4.0 5.0 4.0) 2))
+             (ok (equalp (interpolate-4 1.0 0.0 2.0 4.0 5.0 4.0) 4))
+             (ok (equalp (interpolate-4 1.0 1.0 2.0 4.0 5.0 4.0) 4))
+             (ok (equalp (interpolate-4 0.0 1.0 2.0 4.0 5.0 4.0) 5))))
