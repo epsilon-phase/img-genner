@@ -405,13 +405,18 @@ based on how far the coordinate is along the line"
    The quality number is Mysterious, and only applies to the jpeg encoder.
    If the filename is actually a stream, then it will be written to the stream as a png."
   (if (not (stringp filename))
-      (let ((im (make-instance 'zpng:png :image-data (copy-image-into-flat image) :width (array-dimension image 1) :height (array-dimension image 0))))
+      (let ((im (make-instance
+                 :color-type (if (= 3 (array-dimension image 2)) :truecolor :truecolor-alpha)
+                 'zpng:png :width (array-dimension image 1) :height (array-dimension image 0))))
+        (copy-image image (zpng:data-array im))
         (zpng:write-png-stream im filename))
       (let ((ext (subseq filename (1+ (position #\. filename :from-end t)))))
         (cond
           ((string= ext "png")
            (let ((im (make-instance 'zpng:png :image-data (copy-image-into-flat image )
+                                              :color-type (if (= 3 (array-dimension image 2)) :truecolor :truecolor-alpha)
                                     :height (array-dimension image 0) :width (array-dimension image 1))))
+             (copy-image image (zpng:data-array im))
              (zpng:write-png im filename))
            )
           ((string= ext "jpg")
