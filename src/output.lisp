@@ -380,7 +380,7 @@ based on how far the coordinate is along the line"
   "Load an image, detecting the type from the filename"
   (let  ((ext (subseq pathname (1+ (position #\. pathname :from-end t)) )))
     (cond
-      ((string= ext "png") (png:8-bit-image (png:decode-file pathname)))
+      ((string= ext "png") (pngload:data (pngload:load-file pathname)))
       ((or (string= ext "jpg")
            (string= ext "jpeg")) (multiple-value-bind (image height width)
                                (jpeg:decode-image pathname :colorspace-conversion t)
@@ -401,13 +401,19 @@ based on how far the coordinate is along the line"
                                                                     (aref im y x 0)))
                                                    finally (return im)))))))))
 (defun save-image(image filename &key (quality 64))
-  "Save an image to the given filename, selecting png or jpeg compression based on the extension. The quality number is Mysterious, and only applies to the jpeg encoder.
-If the filename is actually a stream, then it will be written to the stream as a "
+  "Save an image to the given filename, selecting png or jpeg compression based on the extension.
+   The quality number is Mysterious, and only applies to the jpeg encoder.
+   If the filename is actually a stream, then it will be written to the stream as a png."
   (if (not (stringp filename))
-      (png:encode image filename)
+      (let ((im (make-instance 'zpng:png :image-data (copy-image-into-flat image) :width (array-dimension image 1) :height (array-dimension image 0))))
+        (zpng:write-png-stream im filename))
       (let ((ext (subseq filename (1+ (position #\. filename :from-end t)))))
         (cond
-          ((string= ext "png") (png:encode-file image filename))
+          ((string= ext "png")
+           (let ((im (make-instance 'zpng:png :image-data (copy-image-into-flat image )
+                                    :height (array-dimension image 0) :width (array-dimension image 1))))
+             (zpng:write-png im filename))
+           )
           ((string= ext "jpg")
                                         ;CL-JPEG seems unable to enable us to produce
                                         ;images with reasonable loss, but, eh.
@@ -454,10 +460,15 @@ If the filename is actually a stream, then it will be written to the stream as a
     result))
 (declaim (inline region-average-color))
 (defun region-average-color(image x1 y1 x2 y2)
+  (declare (optimize speed)
+           (type (or (simple-array (unsigned-byte 8) (* * 3))
+                     (simple-array (unsigned-byte 8) (* * 4)))
+                 image)
+           (type fixnum x1 y1 x2 y2))
   (loop with r fixnum = 0
         with b fixnum = 0
         with g fixnum = 0
-        with count = 0
+        with count fixnum = 0
         for y from y1 to y2
         do(loop for x from x1 to x2
                 do(incf count)
@@ -465,9 +476,14 @@ If the filename is actually a stream, then it will be written to the stream as a
                         g (+ g (aref image y x 1))
                         b (+ b (aref image y x 2))))
         finally(setf count (max 1 count))
-        finally(return (vector (floor r count) (floor g count) (floor b count)))))
+        finally(return (make-array 3 :element-type '(unsigned-byte 8) :initial-contents `(,(round r count) ,(round g count) ,(round b count))))))
+
+                                        ; If antialiasing wasn't meant for images then why is it used for raster monitors?
+                                        ; checkmate!
 (defun antialias(image)
-  (loop with result = (copy-image image)
+  (declare (optimize speed (safety 0))
+           (type (simple-array (unsigned-byte 8) (* * *)) image))
+  (loop with result = (the (simple-array (unsigned-byte 8) (* * *)) (copy-image image))
         for y from 0 below (array-dimension image 0)
         for max-y = (min (1- (array-dimension image 0)) (+ y 1))
         for min-y = (max 0 (1- y))

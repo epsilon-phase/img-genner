@@ -58,7 +58,8 @@
            (sy (if (< y1 y2) 1 -1))
            (err (+ dx dy))
            (r (if buffer buffer
-                  (make-array dx
+                  (make-array (ceiling (sqrt (+ (* dx dx) (* dy dy))))
+                              :element-type 'list
                               :adjustable t :fill-pointer 0
                               :initial-element nil))))
       (declare (type fixnum err dy dx ))

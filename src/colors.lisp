@@ -28,11 +28,15 @@
 (defun make-color-rgb(r g b)
   "Create a vector suitable for usage in the rasterization functions."
   (map 'vector (lambda(x) (coerce x '(unsigned-byte 8)))
-                       `(,r ,g ,b)))
+       `(,r ,g ,b)))
+(declaim (inline rgb))
+(defun rgb(r g b)
+  (vector r g b))
 (defun get-random-color()
   (loop repeat (random (hash-table-count *color-names*))
         for i being the hash-keys of *color-names*
         finally(return (values (get-color i) i))))
+
 (export '(def-hex-color def-color get-color get-color-list get-random-color))
 #|Copied from the W3C CSS color table |#
 (def-hex-color "AliceBlue" #xF0F8FF)

@@ -17,13 +17,6 @@
           do(vector-push-extend i v))
     (vector-push-extend item v)
     v))
-(defun flat-array-to-image(arr height width)
-  (let ((r (make-array (list height width (/ (array-total-size arr) (* height width))) :element-type '(unsigned-byte 8))))
-    (loop with b = (array-storage-vector arr)
-          for i from 0 below (array-dimension arr 0)
-          do(setf (aref b i) (aref arr i)))
-    r
-    ))
 (defun copy-image(image)
   (declare (type (simple-array * (* * *)) image))
   (loop with new = (make-array (array-dimensions image) :element-type (array-element-type image))
@@ -33,6 +26,20 @@
                         do(setf (aref new y x c)
                                 (aref image y x c))))
         finally (return new)))
+(defun copy-image-into-flat(image &optional arr)
+  (unless arr (setf arr (make-array (array-total-size image) :element-type '(unsigned-byte 8))))
+  (let ((count 0))
+    (loop for y from 0 below (array-dimension image 0)
+          do(loop for x from 0 below (array-dimension image 1)
+                  do(setf (aref arr count)
+                          (aref image y x 0)
+                          (aref arr (+ count 1))
+                          (aref image y x 1)
+                          (aref arr (+ count 2))
+                          (aref image y x 2))
+                  do(incf count 3)
+                  )
+          finally(return arr))))
 (export '(copy-image))
 
 (defmacro whenv(test value &body body)
@@ -66,4 +73,17 @@
                        `(do (progn ,@body)))
            )))
 
-
+(declaim
+ #+sbcl (sb-ext:maybe-inline index-of-closest)
+ #-sbcl (inline index-of-closest))
+(defun index-of-closest(function list item)
+  (loop with best = 1000000
+        with best-index = 0
+        for i in list
+        for index from 0
+        for closeness = (funcall function item i)
+        when (< closeness best)
+          do(setf best closeness
+                  best-index index)
+        finally(return best-index)
+        ))
