@@ -403,7 +403,7 @@ based on how far the coordinate is along the line"
 (defun save-image(image filename &key (quality 64))
   "Save an image to the given filename, selecting png or jpeg compression based on the extension. The quality number is Mysterious, and only applies to the jpeg encoder.
 If the filename is actually a stream, then it will be written to the stream as a "
-  (if (output-stream-p filename)
+  (if (not (stringp filename))
       (png:encode image filename)
       (let ((ext (subseq filename (1+ (position #\. filename :from-end t)))))
         (cond
@@ -452,5 +452,33 @@ If the filename is actually a stream, then it will be written to the stream as a
                           do(setf (aref result y x c) (aref image y x c)))
                   do(setf (aref result y x 3) default-alpha)))
     result))
+(declaim (inline region-average-color))
+(defun region-average-color(image x1 y1 x2 y2)
+  (loop with r fixnum = 0
+        with b fixnum = 0
+        with g fixnum = 0
+        with count = 0
+        for y from y1 to y2
+        do(loop for x from x1 to x2
+                do(incf count)
+                do(setf r (+ r (aref image y x 0))
+                        g (+ g (aref image y x 1))
+                        b (+ b (aref image y x 2))))
+        finally(setf count (max 1 count))
+        finally(return (vector (floor r count) (floor g count) (floor b count)))))
+(defun antialias(image)
+  (loop with result = (copy-image image)
+        for y from 0 below (array-dimension image 0)
+        for max-y = (min (1- (array-dimension image 0)) (+ y 1))
+        for min-y = (max 0 (1- y))
+        do(loop for x from 0 below (array-dimension image 1)
+                for max-x = (min (1- (array-dimension image 1)) (+ x 1))
+                for min-x = (max 0 (1- x))
+                do(loop for i from 0
+                        for c across (region-average-color image min-x min-y max-x max-y)
+                        do(setf (aref result y x i) c))
 
-(export '(save-image load-image make-image))
+                )
+        finally(return result)))
+
+(export '(save-image load-image make-image antialias))
