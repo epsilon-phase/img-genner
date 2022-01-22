@@ -27,7 +27,6 @@
                                 (aref image y x c))))
         finally (return new)))
 (defun copy-image-into-flat(image &optional arr)
-  
   (unless arr (setf arr (make-array (array-total-size image) :element-type '(unsigned-byte 8))))
   (let ((count 0))
     (loop for y from 0 below (array-dimension image 0)

@@ -563,6 +563,7 @@ It is an error to specify images that are of different dimensions"
       )
     i2
     ))
+#+sbcl
 (declaim (sb-ext:maybe-inline pixel-midpoint))
 (defun pixel-midpoint(image x1 y1 x2 y2 c)
   (declare (optimize speed (safety 0))

@@ -1,5 +1,5 @@
-(require :png)
 (in-package img-genner)
+
                                         ;TODO add assertions for color type checking.
 #+sbcl
 (declaim (sb-ext:maybe-inline correct-indices swap-pixel swap-pixel-2 get-pixel))
@@ -29,6 +29,7 @@
                           x z)
                     i)))
   )
+#+sbcl
 (declaim (sb-ext:maybe-inline get-pixel))
 (defun get-pixel(image x y &optional (result-vec nil))
   (declare (type fixnum x y)
