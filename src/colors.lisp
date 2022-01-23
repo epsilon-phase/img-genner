@@ -11,6 +11,7 @@
                   (vector (ldb (byte 8 16) c)
                           (ldb (byte 8 8) c)
                           (ldb (byte 8 0) c))
+                  ; This may not be right.
                   (vector (ldb (byte 8 0) c)
                           (ldb (byte 8 8) c)
                           (ldb (byte 8 16) c)))
@@ -37,7 +38,7 @@
         for i being the hash-keys of *color-names*
         finally(return (values (get-color i) i))))
 
-(export '(def-hex-color def-color get-color get-color-list get-random-color))
+(export '(def-hex-color def-color get-color get-color-list get-random-color rgb))
 #|Copied from the W3C CSS color table |#
 (def-hex-color "AliceBlue" #xF0F8FF)
 (def-hex-color "AntiqueWhite" #xFAEBD7)

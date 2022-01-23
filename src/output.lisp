@@ -2,7 +2,8 @@
 
                                         ;TODO add assertions for color type checking.
 #+sbcl
-(declaim (sb-ext:maybe-inline correct-indices swap-pixel swap-pixel-2 get-pixel))
+(declaim (sb-ext:maybe-inline correct-indices swap-pixel swap-pixel-2 get-pixel)
+         (optimize (compilation-speed 0)))
 (defun correct-indices(width height x y)
   (declare
            (type fixnum height width x y)
@@ -32,6 +33,7 @@
 #+sbcl
 (declaim (sb-ext:maybe-inline get-pixel))
 (defun get-pixel(image x y &optional (result-vec nil))
+  "Return the value of a pixel at a given location in an array. Optionally the array can be supplied"
   (declare (type fixnum x y)
            (type (or
                   (simple-array (unsigned-byte 8) (* * 3))
@@ -59,25 +61,27 @@
         )))
 ;(declaim (ftype (function ((simple-array #1=(unsigned-byte 8) (* * 3)) fixnum fixnum &optional t) (values (simple-array #1# (3)))) get-pixel))
 (defun swap-pixel(image x1 y1 x2 y2)
+  "Swap pixels between two points on the same image."
   (declare (type (simple-array (unsigned-byte 8) (* * *)) image)
            (type fixnum x1 y1 x2 y2)
            (optimize speed)
            (inline correct-indices))
   (multiple-value-bind (x1 y1) (correct-indices (array-dimension image 1) (array-dimension image 0) x1 y1)
     (multiple-value-bind (x2 y2) (correct-indices (array-dimension image 1) (array-dimension image 0) x2 y2)
-      (loop for i from 0 below 3
+      (loop for i from 0 below (array-dimension image 2)
             do(psetf (aref image y1 x1 i) (aref image y2 x2 i)
                      (aref image y2 x2 i) (aref image y1 x1 i)))
       )
     ))
 (defun swap-pixel-2(image1 x1 y1 image2 x2 y2)
+  "Swap pixels between two different images in two specified places."
   (declare (type (simple-array (unsigned-byte 8) (* * *)) image1 image2)
            (type fixnum x1 y1 x2 y2)
            (optimize speed)
            (inline correct-indices))
   (multiple-value-bind (x1 y1) (correct-indices (array-dimension image1 1) (array-dimension image1 0) x1 y1)
     (multiple-value-bind (x2 y2) (correct-indices (array-dimension image2 1) (array-dimension image2 0) x2 y2)
-      (loop for i from 0 below 3
+      (loop for i from 0 below (array-dimension image1 2)
             do(psetf (aref image2 y2 x2 i) (aref image1 y1 x1 i)
                      (aref image1 y1 x1 i) (aref image1 y2 x2 i))))))
 (defun copy-region(source dest width height x1 y1
@@ -406,9 +410,9 @@ based on how far the coordinate is along the line"
    The quality number is Mysterious, and only applies to the jpeg encoder.
    If the filename is actually a stream, then it will be written to the stream as a png."
   (if (not (stringp filename))
-      (let ((im (make-instance
+      (let ((im (make-instance 'zpng:png
                  :color-type (if (= 3 (array-dimension image 2)) :truecolor :truecolor-alpha)
-                 'zpng:png :width (array-dimension image 1) :height (array-dimension image 0))))
+                 :width (array-dimension image 1) :height (array-dimension image 0))))
         (copy-image image (zpng:data-array im))
         (zpng:write-png-stream im filename))
       (let ((ext (subseq filename (1+ (position #\. filename :from-end t)))))
@@ -457,6 +461,7 @@ based on how far the coordinate is along the line"
         finally (return image)))
 
 (defun add-alpha-channel(image &optional (default-alpha 255))
+  "Make a copy of an image, adding an alpha channel with an optional alpha value"
   (let ((result (make-array `(,(array-dimension image 0) ,(array-dimension image 1) 4))))
     (loop for y from 0 below (array-dimension image 0)
           do(loop for x below (array-dimension image 1)
@@ -487,6 +492,7 @@ based on how far the coordinate is along the line"
                                         ; If antialiasing wasn't meant for images then why is it used for raster monitors?
                                         ; checkmate!
 (defun antialias(image)
+  "Antialias the image"
   (declare (optimize speed (safety 0))
            (type (simple-array (unsigned-byte 8) (* * *)) image))
   (loop with result = (the (simple-array (unsigned-byte 8) (* * *)) (copy-image image))

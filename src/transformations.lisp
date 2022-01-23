@@ -139,4 +139,4 @@ Equivalent to
 (declaim (ftype (function (single-float single-float) (simple-array single-float (2)))
                 point))
 (defparameter *distance-functions* (list #'chess-distance #'distance2d #'biggest-magnitude))
-(export '(chess-distance biggest-magnitude *distance-functions* point))
+(export '(chess-distance biggest-magnitude *distance-functions* point point-x point-y))
