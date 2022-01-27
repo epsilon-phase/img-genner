@@ -6,7 +6,9 @@
   (values (aref image y x 0) (aref image y x 1) (aref image y x 2)))
 
 (defun compare-colors-bytewise(c1 c2)
-  (declare (type (vector (unsigned-byte 8) 3) c1 c2))
+  (declare (type (or (simple-array (unsigned-byte 8) (3))
+                     (vector (unsigned-byte 8) 3))
+                 c1 c2))
   (loop for a across c1
         for b across c2
           until (not (= a b))
@@ -69,7 +71,9 @@ using the comparison function passed"
 (defun ordinal-pixel-sort(image &key (comparison #'compare-colors-bytewise)
                                   (segment-length 20) (direction :left))
   (declare (optimize (speed 2))
-           (type (simple-array (unsigned-byte 8) (* * *)) image))
+           (type (simple-array (unsigned-byte 8) (* * *)) image)
+           (inline sort-along-line)
+           (type fixnum segment-length))
   (flet ((line (start)
            "start is the x or y coordinate to use"
            (multiple-value-bind (offset-x offset-y start-x start-y)
@@ -92,6 +96,7 @@ using the comparison function passed"
           do(loop for l in (split-n-length (line i) segment-length)
                   do(sort-along-line image l comparison))
           )
+    image
     ))
 (defun color-diff(c1 c2)
   (declare (type (simple-array (unsigned-byte 8) (*)) c1 c2)
@@ -520,22 +525,39 @@ It is an error to specify images that are of different dimensions"
                       (funcall func r1 g1 b1)
                     (set-pixel-rgb image ix iy r g b))))
   )
+(declaim #+sbcl(sb-ext:maybe-inline closest-color))
+(defun closest-color(color colors function)
+  (declare (type (function (t t) single-float) function))
+  (loop for i in colors
+        with best-cost = 100000
+        with best = nil
+        for diff =(funcall function color i)
+        when (< diff best-cost)
+          do(setf best i best-cost diff)
+        finally(return best))
+  )
 (defun colorize-naive(image color &optional buffer)
+  "Reduce an image down the closest color in the list provided using the color-diff function
+   The buffer may be provided to reuse memory if desired."
   (unless buffer (setf buffer (copy-image image)))
   (loop for y from 0 below (array-dimension image 0)
         do(loop for x from 0 below (array-dimension image 1)
                 for a = (get-pixel image x y a)
-                do(loop for i in color
-                        for diff = (color-diff a i)
-                        with best-cost = 1000000
-                        with best = nil
-                        when (< diff best-cost)
-                             do (setf best-cost diff
-                                      best i)
-                        finally (set-pixel buffer x y best)
-                        )
+                do(set-pixel buffer x y (closest-color a color #'color-diff))
                 ))
   buffer)
+(defun colorize-hue(image colors &optional buffer)
+  "Reduce an image down to the closest color in the list provided using the color-hue function.
+   The buffer may be provided to reuse memory if desired."
+  (declare (inline closest-color set-pixel) (optimize speed)
+           (type (or null (simple-array (unsigned-byte 8) (* * *))) buffer)
+           (type (simple-array (unsigned-byte 8) (* * *)) image))
+  (unless buffer (setf buffer (copy-image image)))
+  (let ((pixel (make-array (array-dimension image 0) :element-type '(unsigned-byte 8))))
+    (do-image (x y) image
+      (get-pixel image x y pixel)
+      (set-pixel buffer x y (closest-color pixel colors #'color-hue)))
+    buffer))
 (defun region-size(x1 y1 x2 y2)
   (* (max 1 (- x2 x1))
      (max 1 (- y2 y1))))
@@ -640,4 +662,5 @@ It is an error to specify images that are of different dimensions"
 (export '(compare-colors-bytewise sort-along-line compare-colors-magnitude ordinal-pixel-sort
           central-pixel-sort fuck-it-up-pixel-sort scramble-image scramble-image-2 intensify-blur
           intensify-blur-nd rgb-to-hsl mosaify upscale-x2-linear upscale-image-by-factor
-          downscale-x2 color-brightness color-diff color-hue colorize-naive))
+          downscale-x2 color-brightness color-diff color-hue colorize-naive colorize-hue
+          swap-pixel set-pixel get-pixel))

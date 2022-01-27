@@ -8,11 +8,11 @@
       (defun def-hex-color(name c)
         (setf (gethash (string-downcase name) *color-names*)
               (if little-endian
-                  (vector (ldb (byte 8 16) c)
+                  (rgb (ldb (byte 8 16) c)
                           (ldb (byte 8 8) c)
                           (ldb (byte 8 0) c))
                   ; This may not be right.
-                  (vector (ldb (byte 8 0) c)
+                  (rgb (ldb (byte 8 0) c)
                           (ldb (byte 8 8) c)
                           (ldb (byte 8 16) c)))
               )))
@@ -31,8 +31,9 @@
   (map 'vector (lambda(x) (coerce x '(unsigned-byte 8)))
        `(,r ,g ,b)))
 (declaim (inline rgb))
-(defun rgb(r g b)
-  (vector r g b))
+(defun rgb(r g b &optional a)
+  (make-array (if a 4 3) :element-type '(unsigned-byte 8)
+              :initial-contents (if a `(,r ,g ,b ,a) `(,r ,g ,b))))
 (defun get-random-color()
   (loop repeat (random (hash-table-count *color-names*))
         for i being the hash-keys of *color-names*

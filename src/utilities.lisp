@@ -58,7 +58,7 @@
       `(if ,test 0 (progn ,@body))
       `(if ,test 0 ,@body)))
 
-(defmacro do-image-region((x y &optional r g b) start-x start-y end-x end-y (image &optional (sx 1) (sy 1))  &body body)
+(defmacro do-image-region((x y &optional r g b a) start-x start-y end-x end-y (image &optional (sx 1) (sy 1))  &body body)
   (let ((cy (gensym)))
     `(loop for ,y from ,start-y below ,end-y by ,sy
            ; This is necessary because the vertical coordinates are inverted from their order in the image
@@ -67,9 +67,11 @@
                        (when r `(for ,r = (aref ,image ,cy ,x 0)))
                        (when g `(for ,g = (aref ,image ,cy ,x 1)))
                        (when b `(for ,b = (aref ,image ,cy ,x 2)))
+                       (when a `(for ,a = (aref ,image ,cy ,x 3)))
                        `(do (progn ,@body)))
            )))
-
+(defmacro do-image((x y &optional r g b a) image &body body)
+  `(do-image-region (,x ,y ,r ,g ,b ,a) 0 0 (array-dimension ,image 1) (array-dimension ,image 0)  (,image) ,@body))
 (declaim
  #+sbcl (sb-ext:maybe-inline index-of-closest)
  #-sbcl (inline index-of-closest))

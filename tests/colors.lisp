@@ -15,11 +15,11 @@
 
 (deftest color-comparison-test
     (testing "First byte"
-             (ok (not (compare-colors-bytewise #(3 0 0) #(2 0 0))))
-             (ok (compare-colors-bytewise #(2 0 0) #(3 0 0)))
+             (ok (not (compare-colors-bytewise (rgb 3 0 0) (rgb 2 0 0))))
+             (ok (compare-colors-bytewise (rgb 0 0) (rgb 3 0 0)))
              )
   (testing "Second byte"
-           (ok (not (compare-colors-bytewise #(2 3 0) #(2 2 0))))
-           (ok  (compare-colors-bytewise #(2 2 0) #(2 3 0)))
+           (ok (not (compare-colors-bytewise (rgb 2 3 0) (rgb 2 2 0))))
+           (ok  (compare-colors-bytewise (rgb 2 2 0) (rgb 2 3 0)))
            )
   )

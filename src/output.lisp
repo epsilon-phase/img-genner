@@ -479,15 +479,20 @@ based on how far the coordinate is along the line"
   (loop with r fixnum = 0
         with b fixnum = 0
         with g fixnum = 0
+        with a fixnum = 0
         with count fixnum = 0
         for y from y1 to y2
         do(loop for x from x1 to x2
                 do(incf count)
                 do(setf r (+ r (aref image y x 0))
                         g (+ g (aref image y x 1))
-                        b (+ b (aref image y x 2))))
+                        b (+ b (aref image y x 2)))
+                when(= 4 (array-dimension image 2))
+                  do(incf a (aref image y x 3))
+                )
         finally(setf count (max 1 count))
-        finally(return (make-array 3 :element-type '(unsigned-byte 8) :initial-contents `(,(round r count) ,(round g count) ,(round b count))))))
+        finally(return (make-array (array-dimension image 2) :element-type '(unsigned-byte 8) :initial-contents `(,(round r count) ,(round g count) ,(round b count))
+                                   ,(when (= 4 (array-dimension image 2)) (round a count))))))
 
                                         ; If antialiasing wasn't meant for images then why is it used for raster monitors?
                                         ; checkmate!
@@ -509,4 +514,4 @@ based on how far the coordinate is along the line"
                 )
         finally(return result)))
 
-(export '(save-image load-image make-image antialias))
+(export '(save-image load-image make-image antialias stroke-line))
