@@ -5,6 +5,7 @@
 (declaim (sb-ext:maybe-inline correct-indices swap-pixel swap-pixel-2 get-pixel)
          (optimize (compilation-speed 0)))
 (defun correct-indices(width height x y)
+  "Correct the coordinates into indices(which are reversed vertically for reasons)"
   (declare
            (type fixnum height width x y)
            (optimize speed))
@@ -143,6 +144,7 @@ Element being the row or column where it starts copying to the second image"
                    (- (1- (array-dimension image 0)) y))
         x c))
 (defun static-color-stroker(color)
+  "Returns a stroker suitable for painting pixels a single color"
   (lambda (i x y frac)
     (declare (ignore frac)
              (type fixnum x y)
@@ -365,7 +367,8 @@ based on how far the coordinate is along the line"
             ))))
   image)
 
-(defgeneric fill-shape(shape image stroker))
+(defgeneric fill-shape(shape image stroker)
+  (:documentation "Fill the shape in the image using the provided stroker"))
 (defmethod fill-shape((r rectangle) image stroker)
       (fill-rectangle r image stroker)
   )
@@ -471,6 +474,7 @@ based on how far the coordinate is along the line"
     result))
 (declaim (inline region-average-color))
 (defun region-average-color(image x1 y1 x2 y2)
+  "Calculate the average color of a region of an image"
   (declare (optimize speed)
            (type (or (simple-array (unsigned-byte 8) (* * 3))
                      (simple-array (unsigned-byte 8) (* * 4)))
@@ -491,8 +495,8 @@ based on how far the coordinate is along the line"
                   do(incf a (aref image y x 3))
                 )
         finally(setf count (max 1 count))
-        finally(return (make-array (array-dimension image 2) :element-type '(unsigned-byte 8) :initial-contents `(,(round r count) ,(round g count) ,(round b count))
-                                   ,(when (= 4 (array-dimension image 2)) (round a count))))))
+        finally(return (make-array (array-dimension image 2) :element-type '(unsigned-byte 8) :initial-contents `(,(round r count) ,(round g count) ,(round b count)
+                                   ,(when (= 4 (array-dimension image 2)) (round a count)))))))
 
                                         ; If antialiasing wasn't meant for images then why is it used for raster monitors?
                                         ; checkmate!
