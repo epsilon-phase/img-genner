@@ -50,6 +50,42 @@ There are a few departures from standard conventions that are probably worthwhil
       @end(section)
   @end(section)
   @begin(section)
+    @title(Colors)
+    Colors have a number of representations. The first and most important is as a @c((simple-array (unsigned-byte 8) (3))), but
+    many functions will work properly on 4 sample color pictures.
+    
+    @cl:with-package[name="img-genner"](
+      @cl:doc(function rgb)
+      @cl:doc(function get-random-color)
+      @cl:doc(function get-color)
+    )
+  @end(section)
+  @begin(section)
+    @title(Pixel Manipulation)
+    @cl:with-package[name="img-genner"](
+      @cl:doc(function set-pixel)
+      @cl:doc(function get-pixel)
+      @cl:doc(function swap-pixel))
+    @begin(section)
+      @title(Drawing)
+      @cl:with-package[name="img-genner"](
+      @cl:doc(function stroke-line)
+      @cl:doc(generic fill-shape)
+      @cl:doc(method fill-shape (shape ellipse) image stroker)
+      @cl:doc(method fill-shape (shape rectangle) image stroker)
+      @cl:doc(method fill-shape (shape polygon) image stroker))
+    @end(section)
+    @begin(section)
+      @title(Strokers)
+      Strokers are what most frameworks call brushes, as such there are a number of different options
+      @cl:with-package[name="img-genner"](
+        @cl:doc(function static-color-stroker)
+        @cl:doc(function gradient-color-stroker)
+        @cl:doc(function radial-gradient-stroker)
+      )
+    @end(section)
+  @end(section)
+  @begin(section)
       @title(Triangularization)
       @cl:with-package[name="img-genner/triangularization"](
         @cl:doc(function earclip))
@@ -65,24 +101,4 @@ There are a few departures from standard conventions that are probably worthwhil
     @cl:doc(function fan-triangulate)
    )
   @end(section)
-  @begin(section)
-    @title(Pixel Manipulation)
-    @cl:with-package[name="img-genner"](
-      @cl:doc(function set-pixel)
-      @cl:doc(function get-pixel)
-      @cl:doc(function swap-pixel)
-      @cl:doc(function stroke-line)
-      @cl:doc(generic fill-shape)
-      @cl:doc(method fill-shape (shape ellipse) image stroker)
-      @cl:doc(method fill-shape (shape rectangle) image stroker)
-      @cl:doc(method fill-shape (shape polygon) image stroker))
-      @begin(section)
-        @title(strokers)
-        @cl:with-package[name="img-genner"](
-        @cl:doc(function static-color-stroker)
-        @cl:doc(function gradient-stroker)
-        @cl:doc(function radial-gradient-stroker)
-        )
-      @end(section)
-    @end(section)
 @end(section)

@@ -1,21 +1,19 @@
 (in-package img-genner)
 (defvar *color-names* (make-hash-table :size 147 :test 'equalp))
-(defun def-color(name r g b)
-  (setf (gethash name *color-names*)
-        (vector r g b)))
 
 (let ((little-endian (member :little-endian *features*)))
-      (defun def-hex-color(name c)
-        (setf (gethash (string-downcase name) *color-names*)
-              (if little-endian
-                  (rgb (ldb (byte 8 16) c)
-                          (ldb (byte 8 8) c)
-                          (ldb (byte 8 0) c))
-                  ; This may not be right.
-                  (rgb (ldb (byte 8 0) c)
-                          (ldb (byte 8 8) c)
-                          (ldb (byte 8 16) c)))
-              )))
+  (defun def-hex-color(name c)
+    "Convenience function for defining a color from the W3C color list"
+    (setf (gethash (string-downcase name) *color-names*)
+          (if little-endian
+              (rgb (ldb (byte 8 16) c)
+                   (ldb (byte 8 8) c)
+                   (ldb (byte 8 0) c))
+                                        ; This may not be right.
+              (rgb (ldb (byte 8 0) c)
+                   (ldb (byte 8 8) c)
+                   (ldb (byte 8 16) c)))
+          )))
 (defun get-color(name &optional (get-alpha nil))
   "Retrieve a color by name from the color table, optionally with an alpha channel"
   (if get-alpha
@@ -23,7 +21,7 @@
       (gethash (string-downcase name) *color-names* #(0 0 0)))
   )
 (defun get-color-list()
-
+  "Get the list of all named colors"
   (loop for i being the hash-keys of *color-names*
         collect i))
 (defun make-color-rgb(r g b)
@@ -32,9 +30,11 @@
        `(,r ,g ,b)))
 (declaim (inline rgb))
 (defun rgb(r g b &optional a)
+  "Make a color array"
   (make-array (if a 4 3) :element-type '(unsigned-byte 8)
               :initial-contents (if a `(,r ,g ,b ,a) `(,r ,g ,b))))
 (defun get-random-color()
+  "Get a random color from the list of CSS colors"
   (loop repeat (random (hash-table-count *color-names*))
         for i being the hash-keys of *color-names*
         finally(return (values (get-color i) i))))
