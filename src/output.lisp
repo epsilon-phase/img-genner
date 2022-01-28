@@ -260,6 +260,14 @@ based on how far the coordinate is along the line"
                       (incf err delta-x)))))))
   image
   )
+(defun stroke-lines(points image stroker)
+  (loop for (a . b) in (line-pairs points)
+        for x1 = (point-x a)
+        for y1 = (point-y a)
+        for x2 = (point-x b)
+        for y2 = (point-y b)
+        do(stroke-line image x1 y1 x2 y2 stroker))
+  )
 #| TODO: This duplicates a crazy amount of work. It could be made better by
  |       keeping a range of line segments sorted by their min-y and max-y and
  |       updating it for each row stroked.
@@ -383,9 +391,12 @@ based on how far the coordinate is along the line"
 (defmethod fill-shape((p t) image stroker)
   "Fill a list of points taken as a polygon"
   (fill-polygon p image stroker))
+(defgeneric stroke-shape(shape image stroker)
+  (:documentation "Stroke the outline of shape with a provided stroker"))
+(defmethod stroke-shape((shape shape) image stroker)
+  (stroke-lines (get-points shape) image stroker))
 (export '(fill-shape radial-gradient-stroker gradient-stroker static-color-stroker
-          fill-rectangle fill-ellipse fill-rectangle-sloppy fill-triangle))
-
+          fill-rectangle fill-ellipse fill-rectangle-sloppy fill-triangle stroke-shape))
                                         ;Actual image saving/loading stuff here :)
 
 (defun load-image(pathname)
