@@ -1,6 +1,7 @@
 (in-package img-genner)
 (declaim (inline lerp interpolate-4 line-index-interpolator))
 (defun lerp(p1 p2 f)
+  "Linear interpolation, that is, y=m*x+b"
   (typecase p1
     (vector
      (map 'vector
@@ -12,6 +13,9 @@
     )
   )
 (defun interpolate-4(x y a b c d)
+  "Interpolate the point between four different values as on two planes that intersect on x=y
+   A B
+   C D"
   (declare (type (single-float -0.01 1.01) x y)
            (type number a b c d))
   (+ (* a (- 1 (max x y (* x y) 0)))
@@ -20,6 +24,9 @@
      (* d (min x (* x y)))))
 
 (defun poly-linear-interpolator(xs ys x)
+  "Interpolate the point in a dataset. Models it as a piecewise equation
+   This does mean that it will not be, and never will be, differentiable at any
+   point on the xs coordinates"
   (cond
     ((< x (aref xs 0))
      (lerp (aref ys 0) (aref ys 1) (/ (- x (aref xs 0)) (- (aref xs 1) (aref xs 0)))))

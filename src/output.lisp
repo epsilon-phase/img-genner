@@ -405,24 +405,25 @@ based on how far the coordinate is along the line"
     (cond
       ((string= ext "png") (pngload:data (pngload:load-file pathname)))
       ((or (string= ext "jpg")
-           (string= ext "jpeg")) (multiple-value-bind (image height width)
-                               (jpeg:decode-image pathname :colorspace-conversion t)
-                                   (loop with im = (make-array (list height width
-                                                                     (/ (array-dimension image 0)
-                                                                        (* height width)))
-                                                         :element-type '(unsigned-byte 8))
-                                   for c across image
-                                   for i = 0 then (1+ i)
-                                   do(setf (row-major-aref im i)
-                                           c)
-                                   finally (return ;For some reason, cl-jpeg loads it in bgr order
-                                             (loop for y from 0 below height
-                                                   do(loop for x from 0 below width
-                                                           do(psetf (aref im y x 0)
-                                                                    (aref im y x 2)
-                                                                    (aref im y x 2)
-                                                                    (aref im y x 0)))
-                                                   finally (return im)))))))))
+           (string= ext "jpeg"))
+       (multiple-value-bind (image height width)
+           (jpeg:decode-image pathname :colorspace-conversion t)
+         (loop with im = (make-array (list height width
+                                           (/ (array-dimension image 0)
+                                              (* height width)))
+                                     :element-type '(unsigned-byte 8))
+               for c across image
+               for i = 0 then (1+ i)
+               do(setf (row-major-aref im i)
+                       c)
+               finally (return ;For some reason, cl-jpeg loads it in bgr order
+                         (loop for y from 0 below height
+                               do(loop for x from 0 below width
+                                       do(psetf (aref im y x 0)
+                                                (aref im y x 2)
+                                                (aref im y x 2)
+                                                (aref im y x 0)))
+                               finally (return im)))))))))
 (defun save-image(image filename &key (quality 64))
   "Save an image to the given filename, selecting png or jpeg compression based on the extension.
    The quality number is Mysterious, and only applies to the jpeg encoder.
@@ -532,5 +533,17 @@ based on how far the coordinate is along the line"
 
                 )
         finally(return result)))
+
+(defun alpha-blend(c1 c2 &optional result-array)
+  (unless result-array (setf result-array
+                             (make-array 3 :element-type '(unsigned-byte 8))))
+  (loop with a1 = (/ (aref c1 3) 255.0)
+        with a2 = (/ (aref c2 3) 255.0)
+        with a0 = (+ a1 (* a2 (- 1.0 a1)))
+        for c from 0 below 3
+        do(setf (aref result-array c)
+                (floor (+ (* (aref c1 c) a1) (* (aref c2 c) a2 (- 1 a1))) a0))
+        finally (return result-array)
+        ))
 
 (export '(save-image load-image make-image antialias stroke-line))
