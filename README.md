@@ -1,7 +1,5 @@
 # Img-Genner
 
-## Violet White
-
 Small set of routines for manipulating or generating images.
 
 ### Installation
