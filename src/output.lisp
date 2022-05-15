@@ -262,10 +262,10 @@ based on how far the coordinate is along the line"
   )
 (defun stroke-lines(points image stroker)
   (loop for (a . b) in (line-pairs points)
-        for x1 = (point-x a)
-        for y1 = (point-y a)
-        for x2 = (point-x b)
-        for y2 = (point-y b)
+        for x1 = (aref a 0)
+        for y1 = (aref a 1)
+        for x2 = (aref b 0)
+        for y2 = (aref b 1)
         do(stroke-line image x1 y1 x2 y2 stroker))
   )
 #| TODO: This duplicates a crazy amount of work. It could be made better by
@@ -354,6 +354,8 @@ based on how far the coordinate is along the line"
   (destructuring-bind (a b c d) (get-points rectangle)
     (fill-triangle a b c image stroker)
     (fill-triangle c d a image stroker)
+    (fill-triangle c b a image stroker)
+    (fill-triangle a d c image stroker)
     )
   image)
 (defun fill-rectangle-sloppy(rectangle image stroker)
@@ -367,11 +369,12 @@ based on how far the coordinate is along the line"
             (adjust-point width (- y) rotation)
           (multiple-value-bind (e-width2 e-height2)
               (adjust-point 0 (- y) rotation)
-            (stroke-line (+ tx e-width2)
+            (stroke-line image
+                         (+ tx e-width2)
                          (- ty e-height2)
                          (+ tx e-width1)
                          (- ty e-height1)
-                         image stroker)
+                         stroker)
             ))))
   image)
 
@@ -511,16 +514,19 @@ based on how far the coordinate is along the line"
                   do(incf a (aref image y x 3))
                 )
         finally(setf count (max 1 count))
-        finally(return (make-array (array-dimension image 2) :element-type '(unsigned-byte 8) :initial-contents `(,(round r count) ,(round g count) ,(round b count)
-                                   ,(when (= 4 (array-dimension image 2)) (round a count)))))))
+        finally(return (make-array (array-dimension image 2) :element-type '(unsigned-byte 8)
+                                                             :initial-contents
+                                                             (append `(,(round r count) ,(round g count) ,(round b count))
+                                                                     (if (= 4 (array-dimension image 2)) (round a count) '()))))))
 
                                         ; If antialiasing wasn't meant for images then why is it used for raster monitors?
                                         ; checkmate!
-(defun antialias(image)
+(defun antialias(image &optional buffer)
   "Antialias the image"
   (declare (optimize speed (safety 0))
-           (type (simple-array (unsigned-byte 8) (* * *)) image))
-  (loop with result = (the (simple-array (unsigned-byte 8) (* * *)) (copy-image image))
+           (type (simple-array (unsigned-byte 8) (* * *)) image)
+           (type (or null (simple-array (unsigned-byte 8) (* * *))) buffer))
+  (loop with result = (the (simple-array (unsigned-byte 8) (* * *)) (or buffer (copy-image image)))
         for y from 0 below (array-dimension image 0)
         for max-y = (min (1- (array-dimension image 0)) (+ y 1))
         for min-y = (max 0 (1- y))

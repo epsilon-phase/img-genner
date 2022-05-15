@@ -101,6 +101,8 @@
 (defmethod move-to((r rectangle) x y)
   (setf (aref (slot-value r 'origin) 0) (coerce 'single-float x)
         (aref (slot-value r 'origin) 1) (coerce 'single-float y)))
+
+
 (defun make-rectangle(x y width height)
   "Create a rectangle at a given location of a given dimension"
   (let ((a (make-instance 'rectangle)))
@@ -109,6 +111,16 @@
           (slot-value a 'height) height)
     a
     ))
+
+(defun rectangle-between(x1 y1 x2 y2 thickness &optional instance)
+  "Create a rectangle at a given location stretching from "
+  (let ((a (if instance instance (make-instance 'rectangle ))))
+    (setf (slot-value a 'origin) (point (/ (+ x1 x2) 2.0) (/ (+ y1 y2) 2.0))
+          (slot-value a 'width) (distance2d x1 y1 x2 y2)
+          (slot-value a 'height) thickness
+          (slot-value a 'rotation) (atan (- y2 y1) (- x2 x1)))
+    a))
+
 (defun make-regular-polygon(x y n radius)
   (declare (type (integer 3 1000) n)
            (type single-float radius x y))
@@ -241,7 +253,8 @@ in a closed path"
                  (get-points s))))
 
 ;(print (macroexpand-1 '(with-array-items ((a 1 1) (b 1 2)) array (setf a 2 b 3))))
-(Declaim (ftype (function (t t t) (values single-float single-float)) adjust-point))
-(export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection rotate-around set-rotation make-regular-polygon move-to move-by rotate-by))
+(declaim (ftype (function (t t t) (values single-float single-float)) adjust-point))
+(export '(ellipse rectangle make-ellipse get-segments get-points make-rectangle get-intersection rotate-around set-rotation make-regular-polygon move-to move-by rotate-by
+          rectangle-between))
 ;; Class member export
 (export '(origin rotation points))

@@ -74,6 +74,8 @@ using the comparison function passed"
            (type (simple-array (unsigned-byte 8) (* * *)) image)
            (inline sort-along-line)
            (type fixnum segment-length))
+  "Perform pixel sorting along a cardinal direction. Saves time in processing the points along the line segments.
+   Performed inplace on image"
   (flet ((line (start)
            "start is the x or y coordinate to use"
            (multiple-value-bind (offset-x offset-y start-x start-y)
