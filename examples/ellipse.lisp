@@ -2,20 +2,12 @@
 (use-package :img-genner)
 (defun ellipse-test()
   (let ((a (img-genner:make-ellipse 50.0 50.0 50.0 50.0))
-        (b (png:make-image 101 101 3)))
+        (b (img-genner:make-image 101 101)))
     (fill-shape (get-segments a) b (static-color-stroker #(255 0 0)))
-    (with-open-file (f "solid-ellipse.png" :direction
-                       :output :element-type '(unsigned-byte 8)
-                                           :if-exists :supersede
-                                           :if-does-not-exist :create)
-      (png:encode b f))
+    (img-genner:save-image b "solid-ellipse.png")
     (fill-shape (get-segments a :max-degree 20) b
                 (radial-gradient-stroker #(255 0 0 0) #(0 255 0) 50 50 50))
-    (with-open-file (f "radial-ellipse.png" :direction :output
-                                            :element-type '(unsigned-byte 8)
-                                            :if-exists :supersede
-                                            :if-does-not-exist :create)
-      (png:encode b f))
+    (img-genner:save-image b )
     ))
 (defun more-ellipses()
   (let ((a (loop repeat 8
@@ -23,7 +15,7 @@
                  collect (make-ellipse i 20.0 20.0 20.0)))
         (colors (list (vector 255 0 0) (vector 0 255 0) (vector 0 0 255) (vector 255 0 255)
                       (vector #xb0 #x0b #x1e)))
-        (b (png:make-image 40 400 3)))
+        (b (make-image 40 400)))
     (setf (cdr (last colors)) colors)
     (loop for i in a
           for c in colors
@@ -31,43 +23,30 @@
                         b
                         (static-color-stroker c))
           )
-    (with-open-file (f "circles.png" :direction :output
-                                     :element-type '(unsigned-byte 8)
-                                     :if-exists :supersede
-                                     :if-does-not-exist :create)
-      (png:encode b f)
-      )
+    (save-image b "many-ellipses.png")
     ))
 (defun nested-ellipse()
   (let ((a (make-ellipse 50.0 50.0 50.0 50.0))
         (b (make-ellipse 50.0 51.0 25.0 25.0))
-        (img (png:make-image 100 101 3))
+        (img (make-image 100 101))
         )
     (fill-shape (append (get-segments a :max-degree 20)
                         (get-segments b :max-degree 4))
                 img
                 (static-color-stroker #(255 0 0))
                 )
-    (with-open-file (f "nested.png" :direction :output
-                                    :element-type '(unsigned-byte 8)
-                                    :if-exists :supersede
-                                    :if-does-not-exist :create)
-      (png:encode img f))
-    ))
+    (save-image img "nested.png")))
+
 (defun specialized-filler()
   (let ((m (make-ellipse 40.0 22.0 20.0 20.0))
         (b (make-ellipse 40.0 150.0 40.0 20.0))
         (r (make-rectangle 20.0 80.0 15.0 30.0))
-        (image (png:make-image 300 80 3))
+        (image (make-image 300 80))
         )
     (fill-ellipse m image (static-color-stroker #(255 0 0)))
     (fill-ellipse-lines b image (static-color-stroker #(0 255 0)))
     (fill-rectangle r image (static-color-stroker #(0 255 255)))
-    (with-open-file (f "specialized.png" :direction :output
-                                         :element-type '(unsigned-byte 8)
-                                         :if-exists :supersede
-                                         :if-does-not-exist :create)
-      (png:encode image f))))
+    (save-image b "specialized.png")))
 (defun ellipse-rotation()
   (let* ((ellipses (map 'list
                        (lambda(x)
@@ -77,12 +56,12 @@
                                                                    (* 2 5))))
                                            )
                        '(2.0 )))
-        (image (png:make-image 40 100 3))
+        (image (make-image 40 100))
         (colors (loop repeat (length ellipses) collect(get-random-color))))
     (loop for e in ellipses
           for c in colors
           do(fill-ellipse e image (static-color-stroker c)))
-    (png:encode-file image "ellipse-rotation.png")
+    (save-image image "ellipse-rotation.png")
     )
   )
 (export '(ellipse-test more-ellipses nested-ellipse specialized-filler ellipse-rotation))

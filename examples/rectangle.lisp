@@ -15,7 +15,7 @@
                                                 (+ (/ size 2.0)(/ size 4.0))
                                                 3.0
                                                 (/ size 2.0)))
-        (image (png:make-image size size 3))
+        (image (make-image size size))
         (minute (- minute))
         (hour (- hour))
         (second (- second)))
@@ -38,7 +38,7 @@
     (img-genner:fill-rectangle hour-hand image (img-genner:static-color-stroker #(0 0 255)))
     (img-genner:fill-shape minute-hand image (img-genner:static-color-stroker #(255 0 0)))
     (img-genner:fill-shape second-hand image (img-genner:static-color-stroker #(255 255 0)))
-    (png:encode-file image pathname)
+    (save-image image pathname)
     )
   )
 (export '(clock-face))
