@@ -1,0 +1,41 @@
+img-genner(3)
+
+# NAME
+
+	img-genner - A common lisp image manipulation library
+
+# OVERVIEW
+
+img-genner intends to produce a reasonably simple and, relatively, performant
+common lisp image manipulation library.
+
+As of now it does not use any native code directly, using only common lisp
+libraries. This keeps it easy to install for those who use roswell.
+
+This library is only tested on SBCL.
+
+## Classes
+
+- img-genner:shape
+	- img-genner:rectangle
+	- img-genner:ellipse
+	- img-genner:polygon
+		- img-genner:convex-polygon
+
+## Slots
+
+- img-genner:shape
+	- origin - The position of the shape in the image
+	- rotation - The amount to rotate the shape by in degrees
+- img-genner:ellipse
+	- radius - pair of numbers indicating the radii across the horizontal
+	  and vertical axis
+- img-genner:rectangle
+	- width - It's like the horizontal radius of an ellipse
+	- height - It's like the vertical radius of an ellipse
+		- *type*: floats
+- img-genner:polygon
+	- points - The list of points that define the polygon
+		- type: vector of cons cells containing the coordinates as floats
+		  '#((1.0 . 1.0) (1.0 . 0.0) (0.0 . 0.0))
+
