@@ -1,5 +1,5 @@
 (in-package img-genner/examples)
-(defun clock-face( hour minute second &optional (size 100) (pathname "clock.png"))
+(defun clock-face( hour minute second &optional (size 400) (pathname "clock.png"))
   (let ((center (make-array 2 :element-type 'single-float
                               :initial-contents `(,(/ size 2.0) ,(/ size 2.0))))
         (hour-hand
@@ -23,7 +23,7 @@
           with shape = (make-instance 'img-genner:rectangle :width 5.0 :height 10.0
                                                             :origin (img-genner:point (/ size 2.0)
                                                                                       (- size 5.0)))
-          do(img-genner:fill-rectangle shape image
+          do(img-genner:fill-shape shape image
                                        (img-genner:static-color-stroker
                                         (if (zerop (mod i 5)) #(255 255 255) #(200 200 200))))
           do(img-genner:rotate-around shape (img-genner:point (/ size 2.0) (/ size 2.0)) 0.104))
