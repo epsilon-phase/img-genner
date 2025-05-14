@@ -39,7 +39,21 @@
         for i being the hash-keys of *color-names*
         finally(return (values (get-color i) i))))
 
-(export '(def-hex-color def-color get-color get-color-list get-random-color rgb))
+(declaim #-(or sbcl) (inline color-interpolate)
+         #+(or sbcl) (sb-ext:maybe-inline color-interpolate))
+(defun color-interpolate(color-a color-b fraction)
+  "Interpolate two colors."
+  (declare (type (simple-array (unsigned-byte 8))
+                 color-a color-b)
+           (type (float 0.0 1.0) fraction))
+  (loop with result = (make-array (array-dimensions color-a) :element-type '(unsigned-byte 8))
+        for index from 0 below (array-dimension color-a 0)
+        do(setf (aref result index)
+              (floor (+ 
+                      (* (aref color-a index) (- 1 fraction))
+                      (* (aref color-b index) fraction))))
+        finally(return result)))
+(export '(def-hex-color def-color get-color get-color-list get-random-color rgb color-interpolate))
 #|Copied from the W3C CSS color table |#
 (def-hex-color "AliceBlue" #xF0F8FF)
 (def-hex-color "AntiqueWhite" #xFAEBD7)

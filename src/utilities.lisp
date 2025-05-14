@@ -86,3 +86,7 @@
                   best-index index)
         finally(return best-index)
         ))
+(defun image-height(image)
+  (array-dimension image 0))
+(defun image-width(image)
+  (array-dimension image 1))

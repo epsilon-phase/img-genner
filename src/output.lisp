@@ -551,5 +551,16 @@ based on how far the coordinate is along the line"
                 (floor (+ (* (aref c1 c) a1) (* (aref c2 c) a2 (- 1 a1))) a0))
         finally (return result-array)
         ))
-
-(export '(save-image load-image make-image antialias stroke-line))
+(defun clear-image(image clear-color)
+  (declare (type (simple-array (unsigned-byte 8)
+                               (* * *))
+                 image)
+           (type (simple-array (unsigned-byte 8) (*))
+                 clear-color)
+           (optimize (speed 2)))
+  
+  (loop for y from 0 below (image-height image)
+        do(loop for x from 0 below (image-width image)
+                do(set-pixel image x y clear-color))))
+(export '(save-image load-image make-image antialias stroke-line
+          clear-image))

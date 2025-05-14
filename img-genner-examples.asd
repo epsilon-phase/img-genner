@@ -4,4 +4,5 @@
   :depends-on ("img-genner")
   :components ((:file "examples/package")
                (:file "examples/ellipse")
-               (:file "examples/rectangle")))
+               (:file "examples/rectangle")
+               (:file "examples/ffmpeg")))
