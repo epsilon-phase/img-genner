@@ -81,7 +81,7 @@ are blocking and therefore require harranguing to get to function"
                             ;;
                             ;; Given fifo nodes' behavior I'm not so
                             ;; certain
-            when (not (or (listen input-1-stream)
+            when (not (and (listen input-1-stream)
                           (listen input-2-stream)))
             do(return nil)
             )
